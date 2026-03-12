@@ -51,6 +51,6 @@ export default function Index() {
           </TouchableOpacity>
         ))}
       </View>
-    </View>
+    </View> // rest
   );
 }
