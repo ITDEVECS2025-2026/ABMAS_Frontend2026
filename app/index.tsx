@@ -8,14 +8,12 @@ export default function Index() {
   const menu = [
     {
       title: "Monitoring Burung",
-      description: "Pantau aktivitas burung secara real-time.",
-      image: require("../assets/burung.png"), 
+      description: "Pantau aktivitas burung secara real-time.", 
       route: "(burung)",
     },
     {
       title: "Monitoring Tanah (Soil)",
       description: "Lihat data kelembapan & suhu tanah secara akurat.",
-      image: require("../assets/soil.png"), 
       route: "(soil)",
     },
   ];
