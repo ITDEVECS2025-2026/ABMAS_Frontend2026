@@ -1,62 +1,31 @@
 {
   "expo": {
-    "name": "Teman Tanah",
-    "slug": "abmas-fe",
+    "name": "ABMA Soil",
+    "slug": "abma-soil",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./styles/assets/logo.png",
-    "scheme": "abmasfe",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "scheme": "abma",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ecslaboratory.abmasecsapp",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "NSLocationWhenInUseUsageDescription": "Aplikasi ini memerlukan akses GPS untuk mencatat posisi sensor di lahan sawah."
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./styles/assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "package": "com.ecslaboratory.abmasecsapp"
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./styles/assets/images/favicon.png"
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./styles/assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
-        }
-      ],
-      "expo-font",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "usesCleartextTraffic": true
-          }
-        }
-      ]
+      ["expo-location", {
+        "locationAlwaysAndWhenInUsePermission": "Izinkan ABMA mengakses GPS untuk sensor sawah."
+      }]
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "844d1988-614c-4e42-bc5b-5d848aa47f29"
-      }
     }
   }
 }

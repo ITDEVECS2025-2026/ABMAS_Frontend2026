@@ -1,223 +1,241 @@
-
-
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  SafeAreaView, Modal, Alert, ActivityIndicator,
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSensorStore } from '../../../store/sensorContext';
+import { COLORS, SPACING, BORDER_RADIUS } from '../../../constants';
+import GaugeCard from '../../../components/device/GaugeCard';
+import ParameterCard from '../../../components/device/ParameterCard';
+import SectionHeader from '@/components/ui/SectionHeader';
+import FertilizerForm
+  from '@/components/form/FertilizerFrom';
+import { getCurrentLocation, formatCoordinates, getTimeAgo } from '../../../utils/gps';
 
-import { mqqtMessageAtom } from '@/store/atom';
-import { useAtomValue } from 'jotai';
+import { FertilizerInput, FertilizationRecord } from '../../../interfaces';
 
-import { GaugeCard } from '@/components/device/GaugeCard';
-import { ParameterCard } from '@/components/device/ParameterCard';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+export default function SensorDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { getSensorById, updateSensorLocation, addFertilizationRecord } = useSensorStore();
 
-const calculateProgress = (value: number, min: number, max: number) => {
-  if (value < min) return 0;
-  if (value > max) return 1;
-  return (value - min) / (max - min);
-};
+  const sensor = getSensorById(id);
+  const [showForm, setShowForm] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [loadingGPS, setLoadingGPS] = useState(false);
 
-
-
-export default function DeviceScreen() {
-  const messages = useAtomValue(mqqtMessageAtom);
-
-  const [currentData, setCurrentData] = useState({
-    timestamp: null,
-    N: null,
-    P: null,
-    K: null,
-    EC: null,
-    pH: null,
-    TempOut: null,
-    HumOut: null,
-    Lux: null,
-    PresOut: null,
-  });
-
-  const saveData = async (id: string, data: {}) => {
-    await AsyncStorage.setItem(id, JSON.stringify(data));
-  };
-
-  const loadData = async (id: string) => {
-    const value = await AsyncStorage.getItem(id);
-    if (value) setCurrentData(JSON.parse(value));
-  };
-
-  const { id } = useLocalSearchParams();
-  // console.log('All Messages:', messages);
-  const latestMessage = JSON.parse(messages[0]?.message || '{}') || {};
-  const devid = latestMessage.DeviceId;
-  // console.log(id, devid)
-
-  if (devid) {
-    saveData(`device-${devid}`, latestMessage);
-  } else {
-    saveData(`device-${id}`, {});
+  if (!sensor) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <Text style={{ color: COLORS.white, textAlign: 'center', marginTop: 40 }}>
+          Sensor tidak ditemukan
+        </Text>
+      </SafeAreaView>
+    );
   }
 
-  // get devid from async storage by id
-  // let storedDevice = await AsyncStorage.getItem(`device-${id}`);
-  loadData(`device-${id}`);
+  const handleGetGPS = async () => {
+    setLoadingGPS(true);
+    const location = await getCurrentLocation();
+    setLoadingGPS(false);
+    if (location) {
+      updateSensorLocation(sensor.id, location);
+      Alert.alert(
+        'GPS Berhasil',
+        `Koordinat: ${formatCoordinates(location)}\nAkurasi: ${location.accuracy?.toFixed(1)} m`
+      );
+    } else {
+      Alert.alert('GPS Gagal', 'Tidak dapat mendapatkan lokasi. Periksa izin GPS.');
+    }
+  };
 
-  // uncomment ae lek mau pakai timestamp dari arduino, tadi harus ngirim timestamp arduiino sender e
-  // let terhubung = currentData.timestamp !== null && ((Date.now() - new Date(currentData.timestamp).getTime()) < 60000);
-  // let terhubung = currentData.N !== null;
-
-  let terhubung = devid == id;
-  console.log('Device ID:', devid, 'Expected ID:', id, 'Connected:', terhubung);
+  const handleFertilizerSubmit = (data: FertilizerInput) => {
+    addFertilizationRecord(sensor.id, data);
+    setShowForm(false);
+    Alert.alert('Berhasil', 'Data pemupukan telah disimpan');
+  };
 
   return (
-    <SafeAreaView  style={styles.container} >
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        {/* Header Utama */}
-        <View style={styles.header}>
-          {/* JUDUL DAN IKON DIUBAH */}
-          <Text style={styles.title}>🍃 Sensor {id}</Text>
-          <Text style={styles.subtitle}>Data Tanah & Lingkungan Secara Langsung</Text>
-          <Text style={styles.updateText}>
-            Pembaruan terakhir: {currentData?.timestamp ? new Date(currentData.timestamp).toLocaleTimeString() : 'No data'}
-          </Text>
+    <SafeAreaView style={styles.safe}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color={COLORS.white} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{sensor.name}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Kondisi Tanah */}
+        <SectionHeader
+          title="Kondisi Tanah"
+          subtitle={`Pembaruan terakhir : ${getTimeAgo(sensor.lastUpdated)}`}
+        />
+        <View style={styles.row}>
+          <GaugeCard label="N" value={sensor.soilData.N} />
+          <GaugeCard label="P" value={sensor.soilData.P} />
+          <GaugeCard label="K" value={sensor.soilData.K} />
+        </View>
+        <View style={styles.row}>
+          <GaugeCard label="EC" value={sensor.soilData.EC} flex={1.2} />
+          <GaugeCard label="pH" value={sensor.soilData.pH} flex={0.8} />
         </View>
 
-        <View style={styles.statusCard}>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Status Pesan</Text>
-            <View style={styles.statusIndicatorRow}>
-              <View style={[
-                styles.statusDot,
-                { backgroundColor: terhubung ? '#10b981' : '#ffd001ff' }
-              ]} />
-              <Text style={[
-                styles.statusText,
-                {
-                  backgroundColor: terhubung ? '#dcfce7' : '#f0dd8cff',
-                  color: terhubung ? '#166534' : '#3b3835ff'
-                }
-              ]}>
-                {terhubung ? 'Masuk' : 'Standby'}
-              </Text>
-            </View>
+        {/* Rekomendasi Pupuk */}
+        <View style={{ marginTop: SPACING.md }}>
+          <SectionHeader title="Rekomendasi Pupuk" subtitle={`Pembaruan terakhir : ${getTimeAgo(sensor.lastUpdated)}`} />
+          <TouchableOpacity style={styles.outlineBtn} onPress={() => setShowForm(true)}>
+            <Text style={styles.outlineBtnText}>Isi Data Pupuk</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.outlineBtn} onPress={() => setShowHistory(true)}>
+            <Text style={styles.outlineBtnText}>History Pemupukan</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Status Sensor */}
+        <View style={{ marginTop: SPACING.md }}>
+          <SectionHeader title="Status Sensor" subtitle={`Pembaruan terakhir : ${getTimeAgo(sensor.lastUpdated)}`} />
+          <View style={styles.row}>
+            <ParameterCard label="Battery :" value={`${sensor.status.battery}%`}
+              statusColor={sensor.status.battery > 30 ? COLORS.success : COLORS.danger} />
+            <ParameterCard label="Battery Health :" value={sensor.status.batteryHealth} />
+          </View>
+          <View style={styles.row}>
+            <ParameterCard label="LoRa Status :" value={sensor.status.loraStatus} />
+            <ParameterCard
+              label="GPS :"
+              value={sensor.location ? 'Aktif ✓' : 'Belum diukur'}
+              statusColor={sensor.location ? COLORS.success : COLORS.warning}
+            />
           </View>
         </View>
 
-        {/* 2. Section Soil Parameters */}
-        <Text style={styles.sectionTitle}>🌱 Kondisi Tanah</Text>
-        <View style={styles.cardRow}>
-          <ParameterCard label="Nitrogen" value={Number(currentData.N || 0).toFixed(1)} unit="mg/kg" icon={<Text style={styles.iconText}>N</Text>} />
-          <ParameterCard label="Fosfor" value={Number(currentData.P || 0).toFixed(1)} unit="mg/kg" icon={<Text style={styles.iconText}>P</Text>} />
-          <ParameterCard label="Kalium" value={Number(currentData.K || 0).toFixed(1)} unit="mg/kg" icon={<Text style={styles.iconText}>K</Text>} />
-        </View>
-        <View style={styles.cardRow}>
-          <ParameterCard label="Konduktivitas" value={Number(currentData.EC || 0).toFixed(1)} unit="μs/cm" icon={<Text style={styles.iconEmoji}>⚡️</Text>} />
-          <ParameterCard label="Tingkat Keasaman" value={Number(currentData.pH || 0).toFixed(1)} unit="pH" icon={<Text style={styles.iconEmoji}>🧪</Text>} />
+        {/* GPS / Lokasi Sawah */}
+        <View style={{ marginTop: SPACING.md }}>
+          <View style={styles.mapCard}>
+            <Text style={styles.mapTitle}>Lokasi Sawah</Text>
+            {sensor.location ? (
+              <View style={styles.gpsInfo}>
+                <Ionicons name="location" size={28} color={COLORS.primaryLight} />
+                <View style={{ marginLeft: SPACING.sm, flex: 1 }}>
+                  <Text style={styles.coordText}>📍 {formatCoordinates(sensor.location)}</Text>
+                  <Text style={styles.coordSubText}>Akurasi: {sensor.location.accuracy?.toFixed(1) ?? '?'} m</Text>
+                  <Text style={styles.coordSubText}>Diperbarui: {getTimeAgo(sensor.location.timestamp)}</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.mapPlaceholder}>
+                <Ionicons name="location-outline" size={40} color={COLORS.textMuted} />
+                <Text style={styles.mapEmptyText}>Lokasi belum diukur</Text>
+              </View>
+            )}
+            <TouchableOpacity style={styles.gpsBtn} onPress={handleGetGPS} disabled={loadingGPS}>
+              {loadingGPS ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <>
+                  <Ionicons name="locate" size={16} color={COLORS.white} />
+                  <Text style={styles.gpsBtnText}>
+                    {sensor.location ? 'Perbarui Lokasi GPS' : 'Ambil Lokasi GPS'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* 3. Section Environment Statistics */}
-        <Text style={styles.sectionTitle}>🏡 Kondisi Lingkungan</Text>
-        <View style={styles.cardRowWrap}>
-          <GaugeCard label="Suhu" value={Number(currentData.TempOut || 0).toFixed(1)} unit="°C" progress={calculateProgress(currentData.TempOut || 0, 0, 50)} icon={<Text style={styles.iconEmoji}>🌡️</Text>} />
-          <GaugeCard label="Kelembaban" value={Number(currentData.HumOut || 0).toFixed(1)} unit="%" progress={calculateProgress(currentData.HumOut || 0, 0, 100)} icon={<Text style={styles.iconEmoji}>💧</Text>} />
-          <GaugeCard label="Intensitas Cahaya" value={Number(currentData.Lux || 0).toFixed(0)} unit="lux" progress={calculateProgress(currentData.Lux || 0, 0, 2000)} icon={<Text style={styles.iconEmoji}>☀️</Text>} />
-          <GaugeCard label="Tekanan" value={Number(currentData.PresOut || 0).toFixed(1)} unit="hPa" progress={calculateProgress(currentData.PresOut || 0, 900, 1100)} icon={<Text style={styles.iconEmoji}>📊</Text>} />
-        </View>
-
+        <View style={{ height: SPACING.xxl }} />
       </ScrollView>
+
+      {/* Modal: Fertilizer Form */}
+      <Modal visible={showForm} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <ScrollView>
+            <FertilizerForm onSubmit={handleFertilizerSubmit} onCancel={() => setShowForm(false)} />
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Modal: History */}
+      <Modal visible={showHistory} animationType="slide" transparent>
+  <View style={styles.modalOverlay}>
+    <View style={styles.historyModal}>
+      <Text style={styles.historyTitle}>History Pemupukan</Text>
+      <ScrollView>
+        {sensor.fertilizationHistory.length === 0 ? (
+          <Text style={styles.emptyText}>Belum ada data pemupukan</Text>
+        ) : (
+          sensor.fertilizationHistory.map((rec: FertilizationRecord) => (
+            <View key={rec.id} style={styles.historyItem}>
+              <Text style={styles.historyDate}>{new Date(rec.date).toLocaleDateString('id-ID')}</Text>
+              <Text style={styles.historyType}>{rec.type}</Text>
+              <Text style={styles.historyAmount}>{rec.amount} kg/ha</Text>
+              {rec.note ? <Text style={styles.historyNote}>{rec.note}</Text> : null}
+            </View>
+          ))
+        )}
+      </ScrollView>
+      <TouchableOpacity style={styles.outlineBtn} onPress={() => setShowHistory(false)}>
+        <Text style={styles.outlineBtnText}>Tutup</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f0fdf4',
-  },
-  contentContainer: {
-    padding: 16,
-  },
+  safe: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    alignItems: 'center',
-    marginBottom: 24,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: COLORS.primaryDark, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#166534',
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: COLORS.white, fontSize: 18, fontWeight: '800' },
+  container: { flex: 1, padding: SPACING.md },
+  row: { flexDirection: 'row', marginBottom: SPACING.xs },
+  outlineBtn: {
+    borderWidth: 2, borderColor: COLORS.primary, borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.md, alignItems: 'center', marginBottom: SPACING.sm,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#15803d',
+  outlineBtnText: { color: COLORS.white, fontWeight: '700', fontSize: 15 },
+  mapCard: {
+    backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden', borderWidth: 1, borderColor: COLORS.primary,
   },
-  updateText: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
+  mapTitle: {
+    color: COLORS.white, fontSize: 14, fontWeight: '700', textAlign: 'center',
+    paddingVertical: SPACING.sm, backgroundColor: COLORS.primaryDark,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#14532d',
-    marginBottom: 16,
-    marginTop: 16,
+  mapPlaceholder: {
+    height: 130, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surfaceLight,
   },
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 12,
+  mapEmptyText: { color: COLORS.textMuted, marginTop: SPACING.sm, fontSize: 13 },
+  gpsInfo: { flexDirection: 'row', alignItems: 'flex-start', padding: SPACING.md, backgroundColor: COLORS.card },
+  coordText: { color: COLORS.white, fontSize: 13, fontWeight: '700', marginBottom: 4 },
+  coordSubText: { color: COLORS.textSecondary, fontSize: 12, marginBottom: 2 },
+  gpsBtn: {
+    backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', paddingVertical: SPACING.sm, margin: SPACING.sm, borderRadius: BORDER_RADIUS.md,
   },
-  cardRowWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  gpsBtnText: { color: COLORS.white, fontWeight: '700', marginLeft: SPACING.xs },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center' },
+  historyModal: {
+    backgroundColor: COLORS.surface, margin: SPACING.md, borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg, maxHeight: '80%', borderWidth: 1, borderColor: COLORS.primary,
   },
-  iconText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#10b981',
+  historyTitle: { color: COLORS.white, fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: SPACING.md },
+  emptyText: { color: COLORS.textMuted, textAlign: 'center', marginVertical: SPACING.lg },
+  historyItem: {
+    backgroundColor: COLORS.card, borderRadius: BORDER_RADIUS.md, padding: SPACING.md,
+    marginBottom: SPACING.sm, borderLeftWidth: 3, borderLeftColor: COLORS.primaryLight,
   },
-  iconEmoji: {
-    fontSize: 24,
-  },
-  statusCard: {
-    marginBottom: 24,
-    padding: 16,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#dcfce7',
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  statusLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  statusIndicatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  statusText: {
-    fontWeight: 'bold',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    fontSize: 14,
-  },
+  historyDate: { color: COLORS.textSecondary, fontSize: 12, marginBottom: 4 },
+  historyType: { color: COLORS.white, fontSize: 14, fontWeight: '700' },
+  historyAmount: { color: COLORS.primaryLight, fontSize: 13, marginTop: 2 },
+  historyNote: { color: COLORS.textMuted, fontSize: 12, marginTop: 4, fontStyle: 'italic' },
 });

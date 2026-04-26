@@ -1,52 +1,44 @@
-// components/device/ParameterCard.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { COLORS, BORDER_RADIUS, SPACING } from '../../constants';
 
-type Props = {
+interface ParameterCardProps {
   label: string;
-  value: string;
-  unit: string;
-  icon: React.ReactNode;
-};
+  value: string | number;
+  statusColor?: string;
+}
 
-export function ParameterCard({ label, value, unit, icon }: Props) {
+export default function ParameterCard({
+  label,
+  value,
+  statusColor = COLORS.primaryLight,
+}: ParameterCardProps) {
   return (
-    <View style={styles.card}>
-      {icon}
+    <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
-      <Text style={styles.unit}>{unit}</Text>
+      <Text style={[styles.value, { color: statusColor }]}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    flex: 1, // Agar bisa membagi ruang secara rata
-    minWidth: 100, // Lebar minimum
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  container: {
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.sm,
+    padding: SPACING.sm,
+    flex: 1,
+    margin: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
   label: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#374151',
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   value: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#166534',
-    marginVertical: 4,
-  },
-  unit: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
