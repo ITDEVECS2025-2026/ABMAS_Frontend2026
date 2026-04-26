@@ -1,15 +1,14 @@
-import React from "react";
-import { Stack } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-export default function Layout() {
+import { Stack } from 'expo-router';
+import { COLORS } from '../../../constants';
+
+export default function SensorLayout() {
   return (
-    <SafeAreaView 
-    style={{flex: 1, backgroundColor:'white'}}
-    edges={['top', 'bottom']}
-    >
-      <Stack screenOptions={{ headerShown: true,
-          title: 'kembali'
-       }} />
-    </SafeAreaView>
-  )
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: COLORS.background },
+        animation: 'slide_from_right',
+      }}
+    />
+  );
 }

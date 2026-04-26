@@ -1,94 +1,58 @@
-// components/device/GaugeCard.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { COLORS, BORDER_RADIUS, SPACING } from '../../constants';
+import { getSoilStatus, getSoilUnit } from '../../utils/format';
 
-type Props = {
+interface GaugeCardProps {
   label: string;
-  value: string;
-  unit: string;
-  progress: number; // Nilai 0 sampai 1
-  icon: React.ReactNode;
-};
+  value: number;
+  flex?: number;
+}
 
-const GAUGE_SIZE = 120;
-const STROKE_WIDTH = 12;
-const RADIUS = (GAUGE_SIZE - STROKE_WIDTH) / 2;
-const CIRCUMFERENCE = RADIUS * Math.PI;
+export default function GaugeCard({ label, value, flex = 1 }: GaugeCardProps) {
+  const status = getSoilStatus(label, value);
+  const unit = getSoilUnit(label);
+  const statusColor =
+    status === 'low' ? COLORS.warning : status === 'high' ? COLORS.danger : COLORS.primaryLight;
 
-export function GaugeCard({ label, value, unit, progress, icon }: Props) {
-  const strokeDashoffset = CIRCUMFERENCE - CIRCUMFERENCE * progress;
-  // console.log(strokeDashoffset)
-  // console.log(progress)
   return (
-    <View style={styles.card}>
-      <View style={styles.gaugeContainer}>
-        <Svg width={GAUGE_SIZE} height={GAUGE_SIZE / 2 + STROKE_WIDTH} viewBox={`0 0 ${GAUGE_SIZE} ${GAUGE_SIZE / 2 + STROKE_WIDTH}`}>
-          {/* Latar Belakang Gauge */}
-          <Path
-            d={`M ${STROKE_WIDTH / 2} ${GAUGE_SIZE / 2} A ${RADIUS} ${RADIUS} 0 0 1 ${GAUGE_SIZE - STROKE_WIDTH / 2} ${GAUGE_SIZE / 2}`}
-            stroke="#e5e7eb"
-            strokeWidth={STROKE_WIDTH}
-            strokeLinecap="round"
-            fill="none"
-          />
-          {/* Foreground Gauge (Progress) */}
-          <Path
-            d={`M ${STROKE_WIDTH / 2} ${GAUGE_SIZE / 2} A ${RADIUS} ${RADIUS} 0 0 1 ${GAUGE_SIZE - STROKE_WIDTH / 2} ${GAUGE_SIZE / 2}`}
-            stroke="#10b981"
-            strokeWidth={STROKE_WIDTH}
-            strokeLinecap="round"
-            fill="none"
-            strokeDasharray={CIRCUMFERENCE}
-            strokeDashoffset={strokeDashoffset}
-          />
-        </Svg>
-        <View style={styles.iconContainer}>
-          {icon}
-        </View>
-      </View>
+    <View style={[styles.card, { flex }]}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
-      <Text style={styles.unit}>{unit}</Text>
+      <Text style={[styles.value, { color: statusColor }]}>
+        {value}{unit ? ` ${unit}` : ''}
+      </Text>
+      <View style={[styles.indicator, { backgroundColor: statusColor }]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 16,
-        alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 4,
-        width: '48%', // Mengambil hampir setengah lebar
-        marginBottom: 16,
-    },
-    gaugeContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 8,
-    },
-    iconContainer: {
-        position: 'absolute',
-    },
-    label: {
-        fontSize: 16,
-        color: '#374151',
-        fontWeight: '500',
-    },
-    value: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#166534',
-        marginVertical: 4,
-    },
-    unit: {
-        fontSize: 14,
-        color: '#6b7280',
-    },
+  card: {
+    backgroundColor: COLORS.primaryDark,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    margin: SPACING.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  label: {
+    color: COLORS.accentLight,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: SPACING.xs,
+  },
+  value: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  indicator: {
+    height: 3,
+    width: 30,
+    borderRadius: 2,
+    marginTop: SPACING.xs,
+  },
 });

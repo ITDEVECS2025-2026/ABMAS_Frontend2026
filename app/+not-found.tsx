@@ -1,13 +1,29 @@
-import { View, Text } from "react-native";
-import React from "react";
+import { Link, Stack } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
+import { COLORS } from '../constants';
+
 export default function NotFoundScreen() {
   return (
-    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-      <Text style={{
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: 'red'
-      }}>404 - Not Found</Text>
-    </View>
+    <>
+      <Stack.Screen options={{ title: 'Oops!' }} />
+      <View style={styles.container}>
+        <Text style={styles.title}>Halaman tidak ditemukan</Text>
+        <Link href="/" style={styles.link}>
+          <Text style={styles.linkText}>Kembali ke Beranda</Text>
+        </Link>
+      </View>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  title: { color: COLORS.white, fontSize: 20, fontWeight: '700' },
+  link: { marginTop: 15 },
+  linkText: { color: COLORS.primaryLight },
+});

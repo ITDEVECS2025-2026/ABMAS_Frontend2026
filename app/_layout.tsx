@@ -1,40 +1,46 @@
-import React from "react";
-import { Stack } from "expo-router";
-import "../styles/global.css";
-import { useFonts, Montserrat_400Regular, Montserrat_500Medium, Montserrat_700Bold } from "@expo-google-fonts/montserrat";
-import { View } from "react-native";
-import { Spinner } from "@/components/ui/spinner";
-import { Provider } from 'jotai';
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../constants';
+import { SensorProvider } from '../store/sensorContext';
 
-
-export default function RootLayout() {
-  const [loaded] = useFonts({
-    Montserrat_400Regular,
-    Montserrat_500Medium,
-    Montserrat_700Bold,
-  });
-
-  if (!loaded) {
-    return (
-      <View>
-        <Spinner color={"blue"} focusable />
-      </View>
-    );
-  }
-
-
-return (
-    <Provider>
-      <Stack
+export default function SoilLayout() {
+  return (
+    <SensorProvider>
+      <Tabs
         screenOptions={{
           headerShown: false,
+          tabBarStyle: {
+            backgroundColor: COLORS.surface,
+            borderTopColor: COLORS.primary,
+            borderTopWidth: 1,
+          },
+          tabBarActiveTintColor: COLORS.primaryLight,
+          tabBarInactiveTintColor: COLORS.textMuted,
         }}
       >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="+not-found" />
-        <Stack.Screen name="(burung)" />
-        <Stack.Screen name="(soil)" />
-      </Stack>
-    </Provider>
+        <Tabs.Screen
+          name="(analysis)"
+          options={{
+            title: 'Dashboard',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="home" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="(sensor)"
+          options={{ href: null }}
+        />
+        <Tabs.Screen
+          name="(setting)"
+          options={{
+            title: 'Settings',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="settings" size={size} color={color} />
+            ),
+          }}
+        />
+      </Tabs>
+    </SensorProvider>
   );
 }
