@@ -87,7 +87,13 @@ export default function SensorDetailScreen() {
         {/* Rekomendasi Pupuk */}
         <View style={{ marginTop: SPACING.md }}>
           <SectionHeader title="Rekomendasi Pupuk" subtitle={`Pembaruan terakhir : ${getTimeAgo(sensor.lastUpdated)}`} />
-          <TouchableOpacity style={styles.outlineBtn} onPress={() => setShowForm(true)}>
+          <TouchableOpacity
+            style={styles.outlineBtn}
+            onPress={() => router.push({
+              pathname: '/(soil)/(analisis)',
+              params: { sensorId: sensor.id },
+            })}
+          >
             <Text style={styles.outlineBtnText}>Isi Data Pupuk</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.outlineBtn} onPress={() => setShowHistory(true)}>
@@ -161,29 +167,29 @@ export default function SensorDetailScreen() {
 
       {/* Modal: History */}
       <Modal visible={showHistory} animationType="slide" transparent>
-  <View style={styles.modalOverlay}>
-    <View style={styles.historyModal}>
-      <Text style={styles.historyTitle}>History Pemupukan</Text>
-      <ScrollView>
-        {sensor.fertilizationHistory.length === 0 ? (
-          <Text style={styles.emptyText}>Belum ada data pemupukan</Text>
-        ) : (
-          sensor.fertilizationHistory.map((rec: FertilizationRecord) => (
-            <View key={rec.id} style={styles.historyItem}>
-              <Text style={styles.historyDate}>{new Date(rec.date).toLocaleDateString('id-ID')}</Text>
-              <Text style={styles.historyType}>{rec.type}</Text>
-              <Text style={styles.historyAmount}>{rec.amount} kg/ha</Text>
-              {rec.note ? <Text style={styles.historyNote}>{rec.note}</Text> : null}
-            </View>
-          ))
-        )}
-      </ScrollView>
-      <TouchableOpacity style={styles.outlineBtn} onPress={() => setShowHistory(false)}>
-        <Text style={styles.outlineBtnText}>Tutup</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+        <View style={styles.modalOverlay}>
+          <View style={styles.historyModal}>
+            <Text style={styles.historyTitle}>History Pemupukan</Text>
+            <ScrollView>
+              {sensor.fertilizationHistory.length === 0 ? (
+                <Text style={styles.emptyText}>Belum ada data pemupukan</Text>
+              ) : (
+                sensor.fertilizationHistory.map((rec: FertilizationRecord) => (
+                  <View key={rec.id} style={styles.historyItem}>
+                    <Text style={styles.historyDate}>{new Date(rec.date).toLocaleDateString('id-ID')}</Text>
+                    <Text style={styles.historyType}>{rec.type}</Text>
+                    <Text style={styles.historyAmount}>{rec.amount} kg/ha</Text>
+                    {rec.note ? <Text style={styles.historyNote}>{rec.note}</Text> : null}
+                  </View>
+                ))
+              )}
+            </ScrollView>
+            <TouchableOpacity style={styles.outlineBtn} onPress={() => setShowHistory(false)}>
+              <Text style={styles.outlineBtnText}>Tutup</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

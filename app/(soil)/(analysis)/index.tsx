@@ -44,7 +44,7 @@ export default function DashboardScreen() {
                         style={styles.sensorBtn}
                         onPress={() =>
                             router.push({
-                                pathname: '/(soil)/(sensor)/[id]',
+                                pathname: "/(soil)/(sensor)/[id]",
                                 params: { id: sensor.id },
                             })
                         }
