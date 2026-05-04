@@ -20,13 +20,13 @@ interfaces/             # TypeScript interfaces (IForm, Device, etc.)
 lib/
  └── mqtt.ts            # MQTTService (connect, publish, subscribe, events)
 styles/
- └── global.css         # NativeWind + Gluestack global styles
+ └── global.css         # NativeWind + Gluestack global stylessss
  ```
 
 # Tech Stack ⚡
 -  React Native (Expo) → Base framework
 -  NativeWind → TailwindCSS for React Native
--  Gluestack UI → Scalable UI components & design system
+-  Gluestack UI → Scalable UI components & design system 
 -  MQTT.js → Realtime IoT communication
 -  TypeScript → Strong typing & maintainability
 
