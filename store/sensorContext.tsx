@@ -1,16 +1,22 @@
 // store/sensorContext.tsx
 
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import { Sensor, SensorLocation, FertilizerInput, AppSettings } from '../interfaces';
+import { fetchInitialSensors } from '../lib/api';
+import { createLiveSocket } from '../lib/socket';
+import { mapPayload, SensorUpdatePayload } from '../utils/mapPayload';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface SensorState {
   sensors: Sensor[];
   settings: AppSettings;
+  connected: boolean;
 }
 
 type Action =
+  | { type: 'UPSERT_SENSORS'; sensors: Sensor[] }
+  | { type: 'SET_CONNECTED'; connected: boolean }
   | { type: 'UPDATE_LOCATION'; sensorId: string; location: SensorLocation }
   | { type: 'ADD_FERTILIZATION'; sensorId: string; input: FertilizerInput }
   | { type: 'UPDATE_SETTINGS'; settings: Partial<AppSettings> };
@@ -18,51 +24,52 @@ type Action =
 interface SensorContextValue {
   sensors: Sensor[];
   settings: AppSettings;
+  connected: boolean;
   updateSensorLocation: (sensorId: string, location: SensorLocation) => void;
   addFertilizationRecord: (sensorId: string, input: FertilizerInput) => void;
   updateSettings: (settings: Partial<AppSettings>) => void;
   getSensorById: (id: string) => Sensor | undefined;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const generateMockSensor = (index: number): Sensor => ({
-  id: `sensor-${index}`,
-  name: `Sensor ${index}`,
-  soilData: {
-    N: Math.floor(Math.random() * 100) + 20,
-    P: Math.floor(Math.random() * 80) + 10,
-    K: Math.floor(Math.random() * 120) + 30,
-    EC: parseFloat((Math.random() * 2 + 0.5).toFixed(2)),
-    pH: parseFloat((Math.random() * 3 + 5).toFixed(1)),
-  },
-  status: {
-    battery: Math.floor(Math.random() * 40) + 60,
-    batteryHealth: 'Good',
-    loraStatus: 'Connected',
-    gps: 'Active',
-  },
-  location: null,
-  lastUpdated: Date.now() - 120000,
-  fertilizationHistory: [],
-});
-
 // ─── Initial State ────────────────────────────────────────────────────────────
 
 const initialState: SensorState = {
-  sensors: Array.from({ length: 5 }, (_, i) => generateMockSensor(i + 1)),
+  sensors: [],
   settings: {
     debugMode: false,
     connectionTopic: 'abmasoes/petani',
     farmerName: 'PRIA SOLO REAL',
     darkMode: true,
   },
+  connected: false,
 };
+
+// Merge incoming readings into existing sensors by id. Live/REST data owns the
+// soil + status fields; the client owns fertilizationHistory and any location
+// the user set manually, so those are preserved across updates.
+function upsertSensors(existing: Sensor[], incoming: Sensor[]): Sensor[] {
+  const byId = new Map(existing.map((s) => [s.id, s]));
+  for (const next of incoming) {
+    const prev = byId.get(next.id);
+    byId.set(next.id, {
+      ...next,
+      fertilizationHistory: prev?.fertilizationHistory ?? next.fertilizationHistory,
+      location: next.location ?? prev?.location ?? null,
+    });
+  }
+  return Array.from(byId.values());
+}
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
 
 function sensorReducer(state: SensorState, action: Action): SensorState {
   switch (action.type) {
+    case 'UPSERT_SENSORS':
+      return { ...state, sensors: upsertSensors(state.sensors, action.sensors) };
+
+    case 'SET_CONNECTED':
+      return { ...state, connected: action.connected };
+
     case 'UPDATE_LOCATION':
       return {
         ...state,
@@ -111,6 +118,30 @@ const SensorContext = createContext<SensorContextValue | null>(null);
 export function SensorProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(sensorReducer, initialState);
 
+  // Backfill from REST once, then stream live updates from the /live namespace.
+  useEffect(() => {
+    let active = true;
+
+    fetchInitialSensors()
+      .then((sensors) => {
+        if (active) dispatch({ type: 'UPSERT_SENSORS', sensors });
+      })
+      .catch((err) => console.warn('Initial sensor fetch failed:', err.message));
+
+    const socket = createLiveSocket();
+    socket.on('connect', () => dispatch({ type: 'SET_CONNECTED', connected: true }));
+    socket.on('disconnect', () => dispatch({ type: 'SET_CONNECTED', connected: false }));
+    socket.on('sensor:update', (payload: SensorUpdatePayload) => {
+      dispatch({ type: 'UPSERT_SENSORS', sensors: mapPayload(payload) });
+    });
+
+    return () => {
+      active = false;
+      socket.removeAllListeners();
+      socket.disconnect();
+    };
+  }, []);
+
   const updateSensorLocation = useCallback((sensorId: string, location: SensorLocation) => {
     dispatch({ type: 'UPDATE_LOCATION', sensorId, location });
   }, []);
@@ -133,6 +164,7 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
       value={{
         sensors: state.sensors,
         settings: state.settings,
+        connected: state.connected,
         updateSensorLocation,
         addFertilizationRecord,
         updateSettings,
