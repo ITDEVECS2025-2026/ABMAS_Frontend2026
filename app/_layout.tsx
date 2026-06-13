@@ -1,46 +1,18 @@
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants';
-import { SensorProvider } from '../store/sensorContext';
+// app/_layout.tsx
+import { Stack } from "expo-router";
+import { SensorProvider } from "@/store/sensorContext";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
-export default function SoilLayout() {
+
+export default function RootLayout() {
   return (
+    <SafeAreaProvider>
     <SensorProvider>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarStyle: {
-            backgroundColor: COLORS.surface,
-            borderTopColor: COLORS.primary,
-            borderTopWidth: 1,
-          },
-          tabBarActiveTintColor: COLORS.primaryLight,
-          tabBarInactiveTintColor: COLORS.textMuted,
-        }}
-      >
-        <Tabs.Screen
-          name="(analysis)"
-          options={{
-            title: 'Dashboard',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="home" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="(sensor)"
-          options={{ href: null }}
-        />
-        <Tabs.Screen
-          name="(setting)"
-          options={{
-            title: 'Settings',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="settings" size={size} color={color} />
-            ),
-          }}
-        />
-      </Tabs>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(soil)" />
+      </Stack>
     </SensorProvider>
+    </SafeAreaProvider>
   );
 }
