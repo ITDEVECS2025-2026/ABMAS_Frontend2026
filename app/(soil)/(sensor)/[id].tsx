@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
+import ScreenHeader from "@/components/ui/ScreenHeader";
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   SafeAreaView, Modal, Alert, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useSensorStore } from '../../../store/sensorContext';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../../constants';
-import GaugeCard from '../../../components/device/GaugeCard';
-import ParameterCard from '../../../components/device/ParameterCard';
+import { useSensorStore } from '@/store/sensorContext';
+import { COLORS, SPACING, BORDER_RADIUS } from '@/constants';
+import GaugeCard from '@/components/device/GaugeCard';
+import ParameterCard from '@/components/device/ParameterCard';
 import SectionHeader from '@/components/ui/SectionHeader';
-import FertilizerForm
-  from '@/components/form/FertilizerFrom';
-import { getCurrentLocation, formatCoordinates, getTimeAgo } from '../../../utils/gps';
+import FertilizerForm from '@/components/form/FertilizerFrom';
+import { getCurrentLocation, formatCoordinates, getTimeAgo } from '@/utils/gps';
 
 import { FertilizerInput, FertilizationRecord } from '../../../interfaces';
 
@@ -60,13 +60,7 @@ export default function SensorDetailScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{sensor.name}</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader title={sensor.name} />
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Kondisi Tanah */}
@@ -208,7 +202,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: COLORS.primary, borderRadius: BORDER_RADIUS.md,
     paddingVertical: SPACING.md, alignItems: 'center', marginBottom: SPACING.sm,
   },
-  outlineBtnText: { color: COLORS.white, fontWeight: '700', fontSize: 15 },
+  outlineBtnText: { color: COLORS.primaryDark, fontWeight: '700', fontSize: 15 },
   mapCard: {
     backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.lg,
     overflow: 'hidden', borderWidth: 1, borderColor: COLORS.primary,

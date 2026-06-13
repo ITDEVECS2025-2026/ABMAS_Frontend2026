@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ScreenHeader from "@/components/ui/ScreenHeader";
 import {
     View,
     Text,
@@ -51,9 +52,18 @@ export default function AnalysisScreen() {
         setPupukLabel(label);
     };
 
-    const handleNext = () => {
-        router.push("/(soil)/(sensor)");
-    };
+const handleNext = () => {
+  router.push({
+    pathname: "/(soil)/(rekomendasi)",
+    params: {
+      sensorId: sensorId,
+      varietas: formData.varietas ?? "",
+      luasLahan: formData.luasLahan,
+      targetHasilPanen: formData.targetHasilPanen,
+      selectedPupuk: formData.selectedPupuk ?? "",
+    },
+  });
+};
 
     const sensorCards = [
         { label: "Nitrogen", value: 1234 },
@@ -66,12 +76,7 @@ export default function AnalysisScreen() {
     return (
         <SafeAreaView style={styles.safeArea}>
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={22} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Analisis Data Pupuk</Text>
-            </View>
+        <ScreenHeader title="Analisis Data Pupuk" />
 
             <ScrollView
                 style={styles.container}

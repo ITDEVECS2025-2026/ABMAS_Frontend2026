@@ -1,12 +1,13 @@
 // store/sensorContext.tsx
-
 import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import { Sensor, SensorLocation, FertilizerInput, AppSettings } from '../interfaces';
 import { fetchInitialSensors } from '../lib/api';
 import { createLiveSocket } from '../lib/socket';
 import { mapPayload, SensorUpdatePayload } from '../utils/mapPayload';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types & Constants ───────────────────────────────────────────────────────
+const SETTINGS_KEY = "APP_SETTINGS";
 
 interface SensorState {
   sensors: Sensor[];
@@ -27,14 +28,28 @@ interface SensorContextValue {
   connected: boolean;
   updateSensorLocation: (sensorId: string, location: SensorLocation) => void;
   addFertilizationRecord: (sensorId: string, input: FertilizerInput) => void;
-  updateSettings: (settings: Partial<AppSettings>) => void;
+  updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
   getSensorById: (id: string) => Sensor | undefined;
 }
 
 // ─── Initial State ────────────────────────────────────────────────────────────
+const DUMMY_SENSORS: Sensor[] = Array.from({ length: 5 }, (_, i) => ({
+  id: String(i + 1),
+  name: `Sensor ${i + 1}`,
+  soilData: { N: 1234, P: 1234, K: 1234, EC: 1234, pH: 1234 },
+  status: {
+    battery: 80,
+    batteryHealth: "Baik",
+    loraStatus: "Aktif",
+    gps: "Belum diukur",
+  },
+  location: null,
+  fertilizationHistory: [],
+  lastUpdated: Date.now(),
+}));
 
 const initialState: SensorState = {
-  sensors: [],
+  sensors: DUMMY_SENSORS,
   settings: {
     debugMode: false,
     connectionTopic: 'abmasoes/petani',
@@ -44,9 +59,6 @@ const initialState: SensorState = {
   connected: false,
 };
 
-// Merge incoming readings into existing sensors by id. Live/REST data owns the
-// soil + status fields; the client owns fertilizationHistory and any location
-// the user set manually, so those are preserved across updates.
 function upsertSensors(existing: Sensor[], incoming: Sensor[]): Sensor[] {
   const byId = new Map(existing.map((s) => [s.id, s]));
   for (const next of incoming) {
@@ -61,7 +73,6 @@ function upsertSensors(existing: Sensor[], incoming: Sensor[]): Sensor[] {
 }
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
-
 function sensorReducer(state: SensorState, action: Action): SensorState {
   switch (action.type) {
     case 'UPSERT_SENSORS':
@@ -110,15 +121,32 @@ function sensorReducer(state: SensorState, action: Action): SensorState {
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
-
 const SensorContext = createContext<SensorContextValue | null>(null);
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
-
 export function SensorProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(sensorReducer, initialState);
 
-  // Backfill from REST once, then stream live updates from the /live namespace.
+  // 1. Load settings dari AsyncStorage saat aplikasi pertama kali dibuka
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(SETTINGS_KEY);
+        if (saved) {
+          dispatch({
+            type: "UPDATE_SETTINGS",
+            settings: JSON.parse(saved),
+          });
+        }
+      } catch (e) {
+        console.error("Gagal memuat pengaturan dari AsyncStorage:", e);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  // 2. Sinkronisasi REST API & Live Socket
   useEffect(() => {
     let active = true;
 
@@ -150,9 +178,30 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'ADD_FERTILIZATION', sensorId, input });
   }, []);
 
-  const updateSettings = useCallback((settings: Partial<AppSettings>) => {
-    dispatch({ type: 'UPDATE_SETTINGS', settings });
-  }, []);
+  // 3. Fungsi tunggal untuk mengupdate state global dan menulis ke penyimpanan lokal
+  const updateSettings = useCallback(
+    async (settings: Partial<AppSettings>) => {
+      dispatch({
+        type: "UPDATE_SETTINGS",
+        settings,
+      });
+
+      try {
+        const newSettings = {
+          ...state.settings,
+          ...settings,
+        };
+
+        await AsyncStorage.setItem(
+          SETTINGS_KEY,
+          JSON.stringify(newSettings)
+        );
+      } catch (e) {
+        console.error("Gagal menyimpan pengaturan ke AsyncStorage:", e);
+      }
+    },
+    [state.settings]
+  );
 
   const getSensorById = useCallback(
     (id: string) => state.sensors.find((s) => s.id === id),
@@ -175,8 +224,6 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
     </SensorContext.Provider>
   );
 }
-
-// ─── Custom Hook (pengganti useSensorStore) ───────────────────────────────────
 
 export function useSensorStore(): SensorContextValue {
   const context = useContext(SensorContext);

@@ -13,8 +13,7 @@ export default function GaugeCard({ label, value, flex = 1 }: GaugeCardProps) {
   const status = getSoilStatus(label, value);
   const unit = getSoilUnit(label);
   const statusColor =
-    status === 'low' ? COLORS.warning : status === 'high' ? COLORS.danger : COLORS.primaryLight;
-
+  status === 'low' ? COLORS.warning : status === 'high' ? COLORS.danger : '#E53935';
   return (
     <View style={[styles.card, { flex }]}>
       <Text style={styles.label}>{label}</Text>
@@ -28,7 +27,7 @@ export default function GaugeCard({ label, value, flex = 1 }: GaugeCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.primaryDark,
+    backgroundColor: COLORS.card,      
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     margin: SPACING.xs,
@@ -39,7 +38,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   label: {
-    color: COLORS.accentLight,
+    color: COLORS.primaryDark,            
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 1,
