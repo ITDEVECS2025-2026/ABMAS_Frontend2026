@@ -33,23 +33,9 @@ interface SensorContextValue {
 }
 
 // ─── Initial State ────────────────────────────────────────────────────────────
-const DUMMY_SENSORS: Sensor[] = Array.from({ length: 5 }, (_, i) => ({
-  id: String(i + 1),
-  name: `Sensor ${i + 1}`,
-  soilData: { N: 1234, P: 1234, K: 1234, EC: 1234, pH: 1234 },
-  status: {
-    battery: 80,
-    batteryHealth: "Baik",
-    loraStatus: "Aktif",
-    gps: "Belum diukur",
-  },
-  location: null,
-  fertilizationHistory: [],
-  lastUpdated: Date.now(),
-}));
 
 const initialState: SensorState = {
-  sensors: DUMMY_SENSORS,
+  sensors: [],
   settings: {
     debugMode: false,
     connectionTopic: 'abmasoes/petani',

@@ -16,17 +16,9 @@ import { COLORS } from "@/constants";
 import { useSensorStore } from "@/store/sensorContext";
 import * as Location from "expo-location";
 
-const SENSORS = [
-  { id: "1", name: "Sensor 1" },
-  { id: "2", name: "Sensor 2" },
-  { id: "3", name: "Sensor 3" },
-  { id: "4", name: "Sensor 4" },
-  { id: "5", name: "Sensor 5" },
-];
-
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
-  const { settings } = useSensorStore();
+  const { settings, sensors, connected } = useSensorStore();
 
   const [location, setLocation] = useState({
     latitude: -7.281970,
@@ -101,60 +93,68 @@ export default function DashboardScreen() {
       </View>
 
       {/* Content */}
-<ScrollView
-  style={styles.container}
-  contentContainerStyle={{
-    paddingTop: 60,
-    paddingBottom: 30,
-  }}
-  showsVerticalScrollIndicator={false}
-  scrollEnabled={false}
->
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{
+          paddingTop: 60,
+          paddingBottom: 30,
+        }}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={false}
+      >
         {/* List Sensor */}
         <Text style={styles.sectionTitle}>List Sensor</Text>
-        {SENSORS.map((sensor) => (
-          <TouchableOpacity
-            key={sensor.id}
-            style={styles.sensorBtn}
-            onPress={() =>
-              router.push({
-                pathname: "/(soil)/(sensor)/[id]",
-                params: { id: sensor.id },
-              })
-            }
-          >
-            <Text style={styles.sensorBtnText}>{sensor.name}</Text>
-          </TouchableOpacity>
-        ))}
+        {sensors.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>
+              {connected ? "Memuat data sensor..." : "Menghubungkan ke server..."}
+            </Text>
+          </View>
+        ) : (
+          sensors.map((sensor) => (
+            <TouchableOpacity
+              key={sensor.id}
+              style={styles.sensorBtn}
+              onPress={() =>
+                router.push({
+                  pathname: "/(soil)/(sensor)/[id]",
+                  params: { id: sensor.id },
+                })
+              }
+            >
+              <Text style={styles.sensorBtnText}>{sensor.name}</Text>
+            </TouchableOpacity>
+          ))
+        )}
 
         {/* Lokasi Sawah */}
         <Text style={styles.sectionTitle}>Lokasi Sawah</Text>
         <MapView
-        style={styles.map}
-         region={{
-           latitude: location.latitude,
+          style={styles.map}
+          region={{
+            latitude: location.latitude,
             longitude: location.longitude,
-           latitudeDelta: 0.01,
+            latitudeDelta: 0.01,
             longitudeDelta: 0.01,
-             }}
+          }}
         >
-<Marker
-  coordinate={{
-    latitude: location.latitude,
-    longitude: location.longitude,
-  }}
-  title="Lokasi Anda"
-/>
+          <Marker
+            coordinate={{
+              latitude: location.latitude,
+              longitude: location.longitude,
+            }}
+            title="Lokasi Anda"
+          />
         </MapView>
 
         <View style={styles.coordinateCard}>
           <Text style={styles.coordinateText}>
-  Latitude : {location.latitude.toFixed(6)}
-</Text>
+            Latitude : {location.latitude.toFixed(6)}
+          </Text>
 
-<Text style={styles.coordinateText}>
-  Longitude : {location.longitude.toFixed(6)}
-</Text>
+          <Text style={styles.coordinateText}>
+            Longitude : {location.longitude.toFixed(6)}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -184,11 +184,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 25,
   },
-container: {
-  flex: 1,
-  paddingHorizontal: 16,
-  marginTop: 0,
-},
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    marginTop: 0,
+  },
 
   scrollContent: {
     paddingTop: 10,
@@ -262,4 +262,12 @@ container: {
     color: "#333",
     lineHeight: 20,
   },
+  emptyCard: {
+  backgroundColor: "#fff",
+  borderRadius: 8,
+  padding: 16,
+  alignItems: "center",
+  marginBottom: 10,
+},
+emptyText: { color: "#888", fontSize: 13 },
 });

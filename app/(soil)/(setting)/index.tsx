@@ -3,39 +3,23 @@ import React, { useEffect, useState } from "react";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, SafeAreaView, Switch, TextInput, Alert
+  TouchableOpacity, SafeAreaView, TextInput, Alert
 } from "react-native";
 import { COLORS } from "@/constants";
 import { useSensorStore } from "@/store/sensorContext";
 
 export default function SettingScreen() {
   const { settings, updateSettings } = useSensorStore();
-  
-  // State Lokal untuk form input (belum langsung disimpan ke AsyncStorage)
-  const [namaPetani, setNamaPetani] = useState(settings.farmerName);
-  const [darkMode, setDarkMode] = useState(settings.darkMode);
 
-  // Sinkronisasi state lokal jika data di store/global context berubah
+  const [namaPetani, setNamaPetani] = useState(settings.farmerName);
+
   useEffect(() => {
     setNamaPetani(settings.farmerName);
-    setDarkMode(settings.darkMode);
   }, [settings]);
 
-  const handleNamaChange = (text: string) => {
-    setNamaPetani(text);
-  };
-
-  const handleDarkModeChange = (value: boolean) => {
-    setDarkMode(value);
-  };
-
-  // Trigger simpan satu kali ke Context (RAM + AsyncStorage) ketika tombol ditekan
   const handleSave = async () => {
     try {
-      await updateSettings({
-        farmerName: namaPetani,
-        darkMode: darkMode,
-      });
+      await updateSettings({ farmerName: namaPetani });
       Alert.alert("Sukses", "Pengaturan berhasil disimpan!");
     } catch (e) {
       Alert.alert("Error", "Gagal menyimpan pengaturan.");
@@ -48,23 +32,6 @@ export default function SettingScreen() {
       <ScreenHeader title="Settings" />
 
       <ScrollView style={styles.container}>
-        {/* Debug Section */}
-        <Text style={styles.sectionLabel}>Debug</Text>
-        <View style={styles.card}>
-          <Text style={styles.settingText}>
-            Tampilkan bandwidth kekuatan koneksi LORA main node dengan side node
-          </Text>
-        </View>
-
-        {/* Pengaturan Koneksi */}
-        <Text style={styles.sectionLabel}>Pengaturan Koneksi</Text>
-        <View style={styles.card}>
-          <TouchableOpacity style={styles.settingRow}>
-            <Text style={styles.settingText}>Tambah/ganti topik</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Nama Petani */}
         <Text style={styles.sectionLabel}>Set Nama Petani</Text>
         <View style={styles.card}>
           <TextInput
@@ -72,24 +39,10 @@ export default function SettingScreen() {
             placeholder="Masukkan nama..."
             placeholderTextColor="#aaa"
             value={namaPetani}
-            onChangeText={handleNamaChange}
+            onChangeText={setNamaPetani}
           />
         </View>
 
-        {/* Dark Mode */}
-        <View style={styles.card}>
-          <View style={styles.settingRow}>
-            <Text style={styles.settingText}>Dark Mode</Text>
-            <Switch
-              value={darkMode}
-              onValueChange={handleDarkModeChange}
-              thumbColor={darkMode ? COLORS.primary : "#f4f3f4"}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-            />
-          </View>
-        </View>
-
-        {/* Tombol Save diletakkan di dalam JSX utama, di bawah list card */}
         <TouchableOpacity
           style={styles.saveButton}
           onPress={handleSave}
@@ -124,12 +77,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 1,
   },
-  settingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  settingText: { color: "#333", fontSize: 13, flex: 1, lineHeight: 20 },
   input: {
     color: "#333",
     fontSize: 14,
