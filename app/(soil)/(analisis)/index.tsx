@@ -15,8 +15,8 @@ import AnalysisDropdown from "@/components/device/AnalysisDropdown";
 import { VARIETAS_DATA } from "@/constants/pupukData";
 import { AnalysisFormData } from "@/interfaces/Analysis";
 import { COLORS, SPACING } from "@/constants";
-import { router, useLocalSearchParams } from "expo-router";  // ← tambah useLocalSearchParams
-import { useSensorStore } from "@/store/sensorContext";       // ← tambah ini
+import { router, useLocalSearchParams } from "expo-router";  
+import { useSensorStore } from "@/store/sensorContext";       
 
 type DropdownType = "varietas" | "pupuk" | null;
 
@@ -28,6 +28,8 @@ export default function AnalysisScreen() {
         targetHasilPanen: "",
         selectedPupuk: null,
     });
+    const { getSensorById } = useSensorStore();
+    const sensor = getSensorById(sensorId);
 
     const [varietasLabel, setVarietasLabel] = useState<string>("");
     const [pupukLabel, setPupukLabel] = useState<string>("");
@@ -52,31 +54,37 @@ export default function AnalysisScreen() {
         setPupukLabel(label);
     };
 
-const handleNext = () => {
-  router.push({
-    pathname: "/(soil)/(rekomendasi)",
-    params: {
-      sensorId: sensorId,
-      varietas: formData.varietas ?? "",
-      luasLahan: formData.luasLahan,
-      targetHasilPanen: formData.targetHasilPanen,
-      selectedPupuk: formData.selectedPupuk ?? "",
-    },
-  });
-};
+    const handleNext = () => {
+        router.push({
+            pathname: "/(soil)/(rekomendasi)",
+            params: {
+                sensorId: sensorId,
+                varietas: formData.varietas ?? "",
+                luasLahan: formData.luasLahan,
+                targetHasilPanen: formData.targetHasilPanen,
+                selectedPupuk: formData.selectedPupuk ?? "",
+            },
+        });
+    };
 
-    const sensorCards = [
-        { label: "Nitrogen", value: 1234 },
-        { label: "Fosfat", value: 1234 },
-        { label: "Kalium", value: 1234 },
-        { label: "EC", value: 1234 },
-        { label: "pH", value: 1234 },
+    const sensorCards = sensor ? [
+        { label: "Nitrogen", value: sensor.soilData.N },
+        { label: "Fosfat", value: sensor.soilData.P },
+        { label: "Kalium", value: sensor.soilData.K },
+        { label: "EC", value: sensor.soilData.EC },
+        { label: "pH", value: sensor.soilData.pH },
+    ] : [
+        { label: "Nitrogen", value: 0 },
+        { label: "Fosfat", value: 0 },
+        { label: "Kalium", value: 0 },
+        { label: "EC", value: 0 },
+        { label: "pH", value: 0 },
     ];
 
     return (
         <SafeAreaView style={styles.safeArea}>
             {/* Header */}
-        <ScreenHeader title="Analisis Data Pupuk" />
+            <ScreenHeader title="Analisis Data Pupuk" />
 
             <ScrollView
                 style={styles.container}
@@ -84,40 +92,40 @@ const handleNext = () => {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Sensor Cards Grid */}
-    {/* Sensor Cards Grid */}
-<View style={styles.cardGrid}>
-    {/* Render semua kartu kecuali yang terakhir jika ganjil */}
-    {sensorCards.slice(0, sensorCards.length % 2 !== 0 ? -1 : sensorCards.length).map((item, index) => (
-        <View key={String(index)} style={styles.cardWrapper}>
-            <View style={styles.sensorCard}>
-                <View style={styles.sensorCardHeader}>
-                    <Text style={styles.sensorLabel}>{item.label}</Text>
-                </View>
-                <View style={styles.sensorCardBody}>
-                    <Text style={styles.sensorValue}>{item.value}</Text>
-                </View>
-            </View>
-        </View>
-    ))}
+                {/* Sensor Cards Grid */}
+                <View style={styles.cardGrid}>
+                    {/* Render semua kartu kecuali yang terakhir jika ganjil */}
+                    {sensorCards.slice(0, sensorCards.length % 2 !== 0 ? -1 : sensorCards.length).map((item, index) => (
+                        <View key={String(index)} style={styles.cardWrapper}>
+                            <View style={styles.sensorCard}>
+                                <View style={styles.sensorCardHeader}>
+                                    <Text style={styles.sensorLabel}>{item.label}</Text>
+                                </View>
+                                <View style={styles.sensorCardBody}>
+                                    <Text style={styles.sensorValue}>{item.value}</Text>
+                                </View>
+                            </View>
+                        </View>
+                    ))}
 
-    {/* Jika jumlah kartu ganjil, render kartu terakhir di baris sendiri */}
-    {sensorCards.length % 2 !== 0 && (
-        <View style={styles.cardWrapperCenter}>
-            <View style={styles.sensorCard}>
-                <View style={styles.sensorCardHeader}>
-                    <Text style={styles.sensorLabel}>
-                        {sensorCards[sensorCards.length - 1].label}
-                    </Text>
+                    {/* Jika jumlah kartu ganjil, render kartu terakhir di baris sendiri */}
+                    {sensorCards.length % 2 !== 0 && (
+                        <View style={styles.cardWrapperCenter}>
+                            <View style={styles.sensorCard}>
+                                <View style={styles.sensorCardHeader}>
+                                    <Text style={styles.sensorLabel}>
+                                        {sensorCards[sensorCards.length - 1].label}
+                                    </Text>
+                                </View>
+                                <View style={styles.sensorCardBody}>
+                                    <Text style={styles.sensorValue}>
+                                        {sensorCards[sensorCards.length - 1].value}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+                    )}
                 </View>
-                <View style={styles.sensorCardBody}>
-                    <Text style={styles.sensorValue}>
-                        {sensorCards[sensorCards.length - 1].value}
-                    </Text>
-                </View>
-            </View>
-        </View>
-    )}
-</View>
                 {/* Varietas Dropdown */}
                 <View style={styles.fieldContainer}>
                     <Text style={styles.fieldLabel}>Varietas</Text>
@@ -268,7 +276,7 @@ const styles = StyleSheet.create({
     },
     cardWrapperCenter: {
         alignSelf: "center",  // ← kartu pH di tengah
-        width: "47%",  
+        width: "47%",
         marginLeft: "auto",
         marginRight: "auto",       // ← lebar sama dengan kartu lain
     },
