@@ -16,6 +16,7 @@ import { COLORS } from "@/constants";
 import { useSensorStore } from "@/store/sensorContext";
 import * as Location from "expo-location";
 
+
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { settings, sensors, connected } = useSensorStore();
@@ -263,11 +264,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   emptyCard: {
-  backgroundColor: "#fff",
-  borderRadius: 8,
-  padding: 16,
-  alignItems: "center",
-  marginBottom: 10,
-},
-emptyText: { color: "#888", fontSize: 13 },
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 16,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  emptyText: { color: "#888", fontSize: 13 },
+
 });

@@ -6,6 +6,8 @@ export interface SoilData {
   K: number;
   EC: number;
   pH: number;
+  temperature?: number;  // t
+  humidity?: number;     // h
 }
 
 export interface SensorStatus {
@@ -13,6 +15,9 @@ export interface SensorStatus {
   batteryHealth: string;
   loraStatus: string;
   gps: string;
+  voltage?: number;      // vb
+  rssi?: number;         // rssi
+  statusCode?: number;   // st
 }
 
 export interface SensorLocation {

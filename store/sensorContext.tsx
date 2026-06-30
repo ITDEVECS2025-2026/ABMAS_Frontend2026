@@ -33,9 +33,26 @@ interface SensorContextValue {
 }
 
 // ─── Initial State ────────────────────────────────────────────────────────────
+const DUMMY_SENSORS: Sensor[] = Array.from({ length: 5 }, (_, i) => ({
+  id: String(i),
+  name: `Sensor ${i + 1}`,
+  soilData: { N: 0, P: 0, K: 0, EC: 0, pH: 0, temperature: 0, humidity: 0 },
+  status: {
+    battery: 0,
+    batteryHealth: '-',
+    loraStatus: 'Menunggu data...',
+    gps: 'No Fix',
+    voltage: 0,
+    rssi: 0,
+    statusCode: 0,
+  },
+  location: null,
+  fertilizationHistory: [],
+  lastUpdated: Date.now(),
+}));
 
 const initialState: SensorState = {
-  sensors: [],
+  sensors: DUMMY_SENSORS,
   settings: {
     debugMode: false,
     connectionTopic: 'abmasoes/petani',
@@ -81,16 +98,16 @@ function sensorReducer(state: SensorState, action: Action): SensorState {
         sensors: state.sensors.map((s) =>
           s.id === action.sensorId
             ? {
-                ...s,
-                fertilizationHistory: [
-                  {
-                    id: Date.now().toString(),
-                    date: Date.now(),
-                    ...action.input,
-                  },
-                  ...s.fertilizationHistory,
-                ],
-              }
+              ...s,
+              fertilizationHistory: [
+                {
+                  id: Date.now().toString(),
+                  date: Date.now(),
+                  ...action.input,
+                },
+                ...s.fertilizationHistory,
+              ],
+            }
             : s
         ),
       };
@@ -140,12 +157,15 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
       .then((sensors) => {
         if (active) dispatch({ type: 'UPSERT_SENSORS', sensors });
       })
-      .catch((err) => console.warn('Initial sensor fetch failed:', err.message));
+      .catch((err) => {
+        console.warn('Initial sensor fetch failed:', err.message);
+        // Tetap pakai DUMMY_SENSORS yang sudah ada di initialState
+      });
 
     const socket = createLiveSocket();
     socket.on('connect', () => dispatch({ type: 'SET_CONNECTED', connected: true }));
     socket.on('disconnect', () => dispatch({ type: 'SET_CONNECTED', connected: false }));
-    socket.on('sensor:update', (payload: SensorUpdatePayload) => {
+    socket.on('sensor_upload', (payload: SensorUpdatePayload) => {
       dispatch({ type: 'UPSERT_SENSORS', sensors: mapPayload(payload) });
     });
 

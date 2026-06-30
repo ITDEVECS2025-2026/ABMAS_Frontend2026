@@ -1,47 +1,59 @@
 import { API_URL } from './config';
 import { Sensor } from '../interfaces';
-import { mapNode, NodeReading } from '../utils/mapPayload';
+import { mapNode } from '../utils/mapPayload';
 
-interface Paginated<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  pages: number;
+interface NodePayload {
+  id: number;
+  n: number; p: number; k: number;
+  ec: number; ph: number;
+  t: number; h: number;
+  la: number; lo: number;
+  bt: number; vb: number;
+  rssi: number; st: number;
 }
 
-// A persisted DB row: same numeric fields as a live reading, but keyed by `nodeId`
-// (not `id`) and carrying a `ts` string.
-type Row = Omit<NodeReading, 'id'> & { nodeId: string; ts: string };
-
-async function getJSON<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`);
-  if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
-  return res.json() as Promise<T>;
+interface TelemetryResponse {
+  event: string;
+  data: {
+    groupId: string;
+    ts: number;
+    nodes: NodePayload[];
+  };
 }
 
-// Rows arrive newest-first (ts desc), so the first row seen for a nodeId is its
-// latest reading. Collapse the history down to one Sensor per node.
-function latestPerNode(rows: Row[], kind: 'Main' | 'Sub'): Sensor[] {
-  const seen = new Set<string>();
-  const out: Sensor[] = [];
-  for (const row of rows) {
-    if (seen.has(row.nodeId)) continue;
-    seen.add(row.nodeId);
-    const ts = Date.parse(row.ts) || Date.now();
-    out.push(mapNode({ ...row, id: row.nodeId }, ts, kind));
-  }
-  return out;
-}
-
-// One-shot backfill of the most recent reading for every known node.
 export async function fetchInitialSensors(): Promise<Sensor[]> {
-  const [main, subs] = await Promise.all([
-    getJSON<Paginated<Row>>('/telemetry?limit=200'),
-    getJSON<Paginated<Row>>('/subnodes?limit=200'),
-  ]);
-  return [
-    ...latestPerNode(main.data, 'Main'),
-    ...latestPerNode(subs.data, 'Sub'),
-  ];
+  const res = await fetch(API_URL);
+
+  if (!res.ok) {
+    throw new Error(`GET failed -> ${res.status}`);
+  }
+
+  const nodes = await res.json();
+
+  console.log("DATA:", nodes);
+
+  return nodes.map((node: any) =>
+    mapNode(
+  {
+    id: String(node.nodeId),
+    n: node.n,
+    p: node.p,
+    k: node.k,
+    ec: node.ec,
+    ph: node.ph,
+
+    t: node.t,
+    h: node.h,
+
+    la: node.la,
+    lo: node.lo,
+    bt: node.bt,
+    vb: node.vb,
+    rssi: node.rssi,
+    st: node.st,
+  },
+      new Date(node.createdAt).getTime(),
+      node.nodeId === 0 ? "Main" : "Sub"
+    )
+  );
 }

@@ -54,18 +54,32 @@ export default function AnalysisScreen() {
         setPupukLabel(label);
     };
 
-    const handleNext = () => {
-        router.push({
-            pathname: "/(soil)/(rekomendasi)",
-            params: {
-                sensorId: sensorId,
-                varietas: formData.varietas ?? "",
-                luasLahan: formData.luasLahan,
-                targetHasilPanen: formData.targetHasilPanen,
-                selectedPupuk: formData.selectedPupuk ?? "",
-            },
-        });
-    };
+const handleNext = () => {
+  // Mapping value pupuk → jenisPupuk & rasioNPK untuk rule engine
+  const pupukMap: Record<string, { jenisPupuk: string; rasioNPK: string }> = {
+    tunggal_jagung:   { jenisPupuk: "tunggal",  rasioNPK: "" },
+    tunggal_padi:     { jenisPupuk: "tunggal",  rasioNPK: "" },
+    phonska_16:       { jenisPupuk: "majemuk",  rasioNPK: "15:15:15" }, // 16:16:16 → pakai 15:15:15 sebagai closest match
+    phonska_16_padi:  { jenisPupuk: "majemuk",  rasioNPK: "15:15:15" },
+    phonska_15:       { jenisPupuk: "majemuk",  rasioNPK: "15:12:10" }, // 15:15:12 → pakai 15:12:10
+    phonska_15_padi:  { jenisPupuk: "majemuk",  rasioNPK: "15:12:10" },
+  };
+
+  const selected = formData.selectedPupuk ?? "tunggal_padi";
+  const mapped = pupukMap[selected] ?? { jenisPupuk: "tunggal", rasioNPK: "" };
+
+  router.push({
+    pathname: "/(soil)/(rekomendasi)",
+    params: {
+      sensorId: sensorId,
+      varietas: formData.varietas ?? "",
+      luasLahan: formData.luasLahan,
+      targetHasilPanen: formData.targetHasilPanen,
+      jenisPupuk: mapped.jenisPupuk,
+      rasioNPK: mapped.rasioNPK || undefined,
+    },
+  });
+};
 
     const sensorCards = sensor ? [
         { label: "Nitrogen", value: sensor.soilData.N },
