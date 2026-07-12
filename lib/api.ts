@@ -60,7 +60,7 @@ export async function fetchInitialSensors(): Promise<Sensor[]> {
 
 // lib/api.ts
 
-const API_BASE_URL = 'https://abmas-ecs-testing.s-net.my.id/telemetry'; 
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL; 
 const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
 
 interface FetchOptions extends RequestInit {
