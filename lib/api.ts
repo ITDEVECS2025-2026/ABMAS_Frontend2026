@@ -57,3 +57,42 @@ export async function fetchInitialSensors(): Promise<Sensor[]> {
     )
   );
 }
+
+// lib/api.ts
+
+const API_BASE_URL = 'https://abmas-ecs-testing.s-net.my.id/telemetry'; 
+const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
+
+interface FetchOptions extends RequestInit {
+  headers?: Record<string, string>;
+}
+
+export const fetchWithAuth = async <T>(endpoint: string, options: FetchOptions = {}): Promise<T> => {
+  const url = `${API_BASE_URL}${endpoint}`;
+  
+  // Menggabungkan header default, secret key, dan custom header jika ada
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-api-key': SECRET_KEY || '',
+    ...options.headers,
+  };
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    const data = await response.json();
+
+    // Menangkap error jika status code bukan 2xx (misal: 401 Unauthorized)
+    if (!response.ok) {
+      throw new Error(data.message || `HTTP Error: ${response.status}`);
+    }
+
+    return data as T;
+  } catch (error) {
+    console.error(`[API Fetch Error] di endpoint ${endpoint}:`, error);
+    throw error;
+  }
+};
