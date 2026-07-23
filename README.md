@@ -27,7 +27,9 @@ components/
 │
 └── sensor/ --> Kondisi Sensor Card
     ├── SensorCardGrid.tsx 
-    └── SensorMetricCard.tsx 
+    └── SensorMetricCard.tsx
+└── form/
+	└── AddLahanCard.tsx --> Card Input Lahan Baru
 lib/ --> Integrasi dengan server
 ├── api.ts
 ├── config.ts
@@ -52,7 +54,7 @@ styles/
 -  TypeScript → Strong typing & maintainability
 
 # UI Components 🖼️
-📍 Device Components (components/sensor)
+📍 Kondisi Lahan Card (components/sensor)
 -  SensorMetricCard.tsx → Kartu metrik kondisi tanah (N, P, K, EC, pH, Suhu, Kelembaban), layout & satuan otomatis menyesuaikan tipe metrik
 -  SensorCardGrid.tsx → Kartu ringkasan sensor (battery, LoRa status) di daftar sensor
 How to use:
@@ -63,7 +65,31 @@ return(
 <SensorCard sensorId={sensor.id} />
 )
 ```
+📍 Input Lahan Baru Card (components/form/AddLahanCard.tsx)
+- Kartu gradient "Tambah Lahan" dengan textbox untuk input nama lahan baru.
+How to use:
+```bash
+import { useState } from "react";
+import AddLahanCard from "@/components/form/AddLahanCard";
 
+export default function SomeScreen() {
+  const [namaLahan, setNamaLahan] = useState("");
+
+  function handleTambah() {
+    // TODO: simpan data sebelum pindah halaman
+    // contoh: panggil services/lahanService.ts -> saveLahan(namaLahan)
+    console.log("Simpan lahan:", namaLahan);
+  }
+
+  return (
+    <AddLahanCard
+      value={namaLahan}
+      onChangeText={setNamaLahan}
+      onSubmit={handleTambah}
+    />
+  );
+}
+```
 📍 Responsive Utility (utils/scale.ts)
 Semua ukuran dari Figma (referensi lebar 412px) wajib dibungkus scale() supaya proporsional di semua device:
 ```bash
