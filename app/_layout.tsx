@@ -9,6 +9,7 @@ import {
   Poppins_500Medium,
   Poppins_600SemiBold,
   Poppins_700Bold,
+  Poppins_400Regular_Italic
 } from "@expo-google-fonts/poppins";
 
 export default function RootLayout() {
@@ -18,6 +19,7 @@ export default function RootLayout() {
     PoppinsMedium: Poppins_500Medium,
     PoppinsSemiBold: Poppins_600SemiBold,
     PoppinsBold: Poppins_700Bold,
+    PoppinsItalic: Poppins_400Regular_Italic,
   });
 
   if (!fontsLoaded) {

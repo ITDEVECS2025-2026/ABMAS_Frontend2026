@@ -1,67 +1,71 @@
-import React from "react";
+import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-    ScrollView,
-    Text,
-    View,
-} from "react-native";
+import { ScrollView, Text, View } from "react-native";
 
 import { useSensorStore } from "@/store/sensorContext";
 import ScreenHeader from "../../components/ui/ScreenHeader";
 import SensorCard from "@/components/sensor/SensorCardGrid";
+import AddLahanCard from "@/components/form/AddlahanCard";
 
 export default function MonitoringPage() {
+  const [namaLahan, setNamaLahan] = useState("");
+  const { sensors, connected } = useSensorStore();
 
-    const {
-        sensors,
-        connected,
-    } = useSensorStore();
+  // Ambil sensor pertama
+  const sensor = sensors[0];
 
-    // Ambil sensor pertama
-    const sensor = sensors[0];
+  function handleTambah() {
+    // TODO: panggil services/lahanService.ts -> saveLahan()
+    console.log("Simpan lahan:", namaLahan);
+  }
 
-    return (
-        <SafeAreaView
-            style={{
-                flex: 1,
-                backgroundColor: "#FFFFFF",
-            }}
+  return (
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#FFFFFF",
+      }}
+    >
+      <ScreenHeader title="Sensor 1" />
+
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          alignItems: "center",
+          paddingBottom: 24,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 22,
+            fontFamily: "PoppinsBold",
+            marginTop: 40,
+            textAlign: "center",
+          }}
         >
-            <ScreenHeader title="Sensor 1" />
+          Monitoring
+        </Text>
 
-            <ScrollView>
+        {sensor && (
+          <View
+            style={{
+              width: "100%",
+              padding: 16,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ marginBottom: 8 }}>{sensor.name}</Text>
 
-                <Text
-                    style={{
-                        fontSize: 22,
-                        fontFamily: "PoppinsBold",
-                        marginTop: 40,
-                        textAlign: "center",
-                    }}>
-                    Monitoring
-                </Text>
+            <SensorCard sensorId={sensor.id} />
 
-
-                {sensor && (
-
-                    <View
-                        style={{
-                            padding: 16,
-                        }}
-                    >
-
-                        <Text>
-                            {sensor.name}
-                        </Text>
-
-                        <SensorCard sensorId={sensor.id} />
-
-                    </View>
-
-                )}
-
-            </ScrollView>
-
-        </SafeAreaView>
-    );
+            <AddLahanCard
+              value={namaLahan}
+              onChangeText={setNamaLahan}
+              onSubmit={handleTambah}
+            />
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
