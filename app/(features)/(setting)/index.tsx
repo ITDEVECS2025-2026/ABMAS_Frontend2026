@@ -3,10 +3,11 @@ import React, { useEffect, useState } from "react";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, SafeAreaView, TextInput, Alert
+  TouchableOpacity, TextInput, Alert
 } from "react-native";
 import { COLORS } from "@/constants";
 import { useSensorStore } from "@/store/sensorContext";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingScreen() {
   const { settings, updateSettings } = useSensorStore();

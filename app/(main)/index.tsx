@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-} from "react-native";
-import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import MapView, { Marker } from "react-native-maps";
 import { COLORS } from "@/constants";
 import { useSensorStore } from "@/store/sensorContext";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
+import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import MapView, { Marker } from "react-native-maps";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 
 export default function DashboardScreen() {
@@ -77,7 +77,7 @@ export default function DashboardScreen() {
             <Text style={styles.name}>{settings.farmerName}</Text>
           </View>
 
-          <TouchableOpacity onPress={() => router.push("/(soil)/(setting)")}>
+          <TouchableOpacity onPress={() => router.push("/(features)/(setting)")}>
             <Ionicons name="settings-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -118,7 +118,7 @@ export default function DashboardScreen() {
               style={styles.sensorBtn}
               onPress={() =>
                 router.push({
-                  pathname: "/(soil)/(sensor)/[id]",
+                  pathname: "/(features)/(sensor)/[id]",
                   params: { id: sensor.id },
                 })
               }
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   greeting: {
-    color: "rgba(255,255,255,0.85)",
+    color: "white",
     fontSize: 16,
   },
   name: {
