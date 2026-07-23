@@ -53,8 +53,8 @@ styles/
 
 # UI Components 🖼️
 📍 Device Components (components/sensor)
-SensorMetricCard.tsx → Kartu metrik kondisi tanah (N, P, K, EC, pH, Suhu, Kelembaban), layout & satuan otomatis menyesuaikan tipe metrik
-SensorCardGrid.tsx → Kartu ringkasan sensor (battery, LoRa status) di daftar sensor
+-  SensorMetricCard.tsx → Kartu metrik kondisi tanah (N, P, K, EC, pH, Suhu, Kelembaban), layout & satuan otomatis menyesuaikan tipe metrik
+-  SensorCardGrid.tsx → Kartu ringkasan sensor (battery, LoRa status) di daftar sensor
 How to use:
 ```bash
 import SensorCard from "@/components/sensor/SensorCardGrid";
@@ -103,11 +103,11 @@ page dan fitur pendukung flow aplikasi hingga mencapai rekomendasi
 rule base yang digunakan untuk rekomendasi pemupukan, terintegrasi dengan page rekomendasi dan data dari sensor
 
 # Font 
-PoppinsLight: Poppins_300Light,
-PoppinsRegular: Poppins_400Regular,
-PoppinsMedium: Poppins_500Medium,
-PoppinsSemiBold: Poppins_600SemiBold,
-PoppinsBold: Poppins_700Bold,
+-  PoppinsLight: Poppins_300Light,
+-  PoppinsRegular: Poppins_400Regular,
+-  PoppinsMedium: Poppins_500Medium,
+-  PoppinsSemiBold: Poppins_600SemiBold,
+-  PoppinsBold: Poppins_700Bold,
 How to use:
 ```bash
 <Text
@@ -128,6 +128,64 @@ Tidak ada warna yang ditambahkan dalam design system
 width: scale(105),
 fontSize: scale(17.028),
 ```
+
+# Integrasi Server
+- Alamat server dikonfigurasi melalui file .env:
+- URL server dikelola secara terpusat melalui: services/config.ts
+
+📍Alur Pengambilan Data Sensor
+```bash
+Server
+   │
+   ▼
+services/api.ts
+   │
+   │ fetchInitialSensors()
+   ▼
+utils/mapPayload.ts
+   │
+   │ mapNode()
+   ▼
+store/sensorContext.tsx
+   │
+   ▼
+Monitoring Page
+   │
+   ▼
+SensorCard / MetricCard
+   │
+   ▼
+Tampilan Data Sensor
+```
+- api.ts: Bertugas mengambil data sensor awal dari server menggunakan HTTP request.
+- Data yang diterima kemudian diproses menggunakan mapNode().
+- mapPayload.ts: Bertugas mengubah struktur data mentah dari server menjadi struktur Sensor yang digunakan oleh aplikasi.
+
+📍Real-Time Sensor Data
+Aplikasi menggunakan Socket.IO untuk menerima pembaruan data sensor secara real-time.
+Alurnya:
+```bash
+Server
+   │
+   ▼
+Socket.IO (/live)
+   │
+   ▼
+sensor:update
+   │
+   ▼
+mapPayload()
+   │
+   ▼
+SensorContext
+   │
+   ▼
+SensorCard
+   │
+   ▼
+UI diperbarui secara otomatis
+```
+- Koneksi Socket.IO dikelola melalui: services/socket.ts
 
 # Get started
 1. Install dependencies
