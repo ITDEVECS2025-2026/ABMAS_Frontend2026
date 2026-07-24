@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Button, // Jangan lupa import Button
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,93 +15,36 @@ import MapView, { Marker } from "react-native-maps";
 import { COLORS } from "@/constants";
 import { useSensorStore } from "@/store/sensorContext";
 import * as Location from "expo-location";
-import { fetchWithAuth } from "../lib/api"; // Pastikan path benar
-import { Sensor } from '../interfaces';
-import { mapNode } from '../utils/mapPayload';
 
-export async function fetchInitialSensors(): Promise<Sensor[]> {
-  // Menggunakan fetchWithAuth agar langsung menembak API_BASE_URL + /telemetry
-  // beserta secret key yang dibutuhkan
-  const nodes = await fetchWithAuth<any[]>('/telemetry', { 
-    method: 'GET' 
-  });
 
-  console.log("DATA DARI SERVER:", nodes);
-
-  // Proses pemetaan data Anda tetap sama seperti sebelumnya
-  return nodes.map((node: any) =>
-    mapNode(
-      {
-        id: String(node.nodeId),
-        n: node.n,
-        p: node.p,
-        k: node.k,
-        ec: node.ec,
-        ph: node.ph,
-        t: node.t,
-        h: node.h,
-        la: node.la,
-        lo: node.lo,
-        bt: node.bt,
-        vb: node.vb,
-        rssi: node.rssi,
-        st: node.st,
-      },
-      new Date(node.createdAt).getTime(),
-      node.nodeId === 0 ? "Main" : "Sub"
-    )
-  );
-}
-
-// HANYA ADA SATU EXPORT DEFAULT
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { settings, sensors, connected } = useSensorStore();
 
   const [location, setLocation] = useState({
-    latitude: -7.28197,
+    latitude: -7.281970,
     longitude: 112.795323,
-
-    
   });
-
-  //State untuk menyimpan data dari API Next.js
-  const [apiData, setApiData] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
 
       if (status !== "granted") {
         return;
       }
 
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      const currentLocation =
+        await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
 
       setLocation({
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
       });
     })();
-  }, []);
-
-  // State untuk menampung data sensor agar bisa ditampilkan di UI
-  const [dataSensor, setDataSensor] = useState<any[]>([]);
-
-  // Gunakan useEffect untuk memanggil data saat pertama kali komponen dimuat
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const data = await fetchInitialSensors(); 
-        setDataSensor(data);
-      } catch (error) {
-        console.error("Gagal mengambil data:", error);
-      }
-    };
-    
-    loadData();
   }, []);
 
   const getGreeting = () => {
@@ -118,22 +60,6 @@ export default function DashboardScreen() {
     if (h >= 11 && h < 15) return "Selamat Siang,";
     if (h >= 15 && h < 18) return "Selamat Sore,";
     return "Selamat Malam,";
-  };
-
-  // Fungsi untuk memanggil API
-// Fungsi untuk memanggil API
-  const loadData = async () => {
-    try {
-      // Ubah "/api/data" menjadi string kosong ""
-      // Karena "/telemetry" sudah ada di lib/api.ts
-      const result = await fetchWithAuth("", { method: "GET" });
-      
-      // Jika response API Anda berupa array (seperti data sensor sebelumnya),
-      // gunakan JSON.stringify agar bisa dirender sebagai teks di layar
-      setApiData(JSON.stringify(result, null, 2));
-    } catch (error: any) {
-      console.error(error.message);
-    }
   };
 
   return (
@@ -175,24 +101,14 @@ export default function DashboardScreen() {
           paddingBottom: 30,
         }}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={true} // Diubah jadi true agar bisa di-scroll jika konten panjang
+        scrollEnabled={false}
       >
-        {/* === TOMBOL TES API NEXT.JS === */}
-        <View style={styles.apiTestCard}>
-          <Text style={styles.sectionTitle}>Tes API Next.js</Text>
-          <Button title="Ambil Data Rahasia" onPress={loadData} />
-          {apiData && <Text style={styles.apiDataText}>{apiData}</Text>}
-        </View>
-        {/* =============================== */}
-
         {/* List Sensor */}
         <Text style={styles.sectionTitle}>List Sensor</Text>
         {sensors.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              {connected
-                ? "Memuat data sensor..."
-                : "Menghubungkan ke server..."}
+              {connected ? "Memuat data sensor..." : "Menghubungkan ke server..."}
             </Text>
           </View>
         ) : (
@@ -274,6 +190,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 0,
   },
+
+  scrollContent: {
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
   statusCard: {
     position: "absolute",
     left: 16,
@@ -349,18 +270,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
+
   emptyText: { color: "#888", fontSize: 13 },
-  apiTestCard: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    elevation: 2,
-  },
-  apiDataText: {
-    marginTop: 10,
-    color: "green",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
+
 });
