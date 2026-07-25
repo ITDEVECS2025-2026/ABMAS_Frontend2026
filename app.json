@@ -11,7 +11,6 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Aplikasi ini memerlukan akses GPS untuk mencatat posisi sensor di lahan sawah."
       }
-     
     },
     "android": {
       "permissions": [
@@ -27,13 +26,14 @@
           "locationAlwaysAndWhenInUsePermission": "Izinkan ABMA mengakses GPS untuk sensor sawah."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
     },
-     "extra": {
-        "apiSecretkey": "JANGANDIKASIHTAU"
-      }
+    "extra": {
+      "apiSecretkey": "JANGANDIKASIHTAU"
+    }
   }
 }

@@ -57,3 +57,5 @@ export interface Sensor {
   lastUpdated: number;
   fertilizationHistory: FertilizationRecord[];
 }   
+
+export * from './ILahan';

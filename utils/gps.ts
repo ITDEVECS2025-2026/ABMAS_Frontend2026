@@ -1,3 +1,4 @@
+// utils/gps.ts
 import * as Location from 'expo-location';
 import { SensorLocation } from '../interfaces';
 
@@ -39,4 +40,21 @@ export function getTimeAgo(timestamp: number): string {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} jam lalu`;
   return `${Math.floor(hours / 24)} hari lalu`;
+}
+
+export async function reverseGeocode(
+  latitude: number,
+  longitude: number
+): Promise<string> {
+  try {
+    const results = await Location.reverseGeocodeAsync({ latitude, longitude });
+    if (results.length === 0) return 'Lokasi tidak diketahui';
+
+    const place = results[0];
+    const parts = [place.city, place.subregion, place.region].filter(Boolean);
+    return parts.join(', ') || 'Lokasi tidak diketahui';
+  } catch (error) {
+    console.error('Reverse Geocode Error:', error);
+    return 'Gagal mendapatkan alamat';
+  }
 }
