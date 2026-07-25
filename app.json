@@ -11,6 +11,7 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Aplikasi ini memerlukan akses GPS untuk mencatat posisi sensor di lahan sawah."
       }
+     
     },
     "android": {
       "permissions": [
@@ -30,6 +31,9 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+     "extra": {
+        "apiSecretkey": "JANGANDIKASIHTAU"
+      }
   }
 }
