@@ -21,9 +21,13 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-location", {
-        "locationAlwaysAndWhenInUsePermission": "Izinkan ABMA mengakses GPS untuk sensor sawah."
-      }]
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Izinkan ABMA mengakses GPS untuk sensor sawah."
+        }
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
