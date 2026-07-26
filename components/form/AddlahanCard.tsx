@@ -114,6 +114,7 @@ function handleSubmit() {
                     flexDirection: "row",
                     alignItems: "center",
                     gap: scale(10),
+                    paddingLeft: scale(6)
                 }}
             >
                 <PlusCircleIcon />

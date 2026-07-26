@@ -1,22 +1,13 @@
-import { VarietasData } from "@/interfaces/Analysis";
+// constants/pupukData.ts
+export type VarietasPupuk = 'TUNGGAL' | 'MAJEMUK_15_15_15' | 'MAJEMUK_15_10_12';
 
-export const VARIETAS_DATA: VarietasData[] = [
-  {
-    label: "Jagung",
-    value: "jagung",
-    pupukOptions: [
-      { label: "Tunggal (Urea, Sp36, KCl)", value: "tunggal_jagung" },
-      { label: "Majemuk Phonska (16:16:16)", value: "phonska_16" },
-      { label: "Majemuk Phonska (15:15:12)", value: "phonska_15" },
-    ],
-  },
-  {
-    label: "Padi",
-    value: "padi",
-    pupukOptions: [
-      { label: "Tunggal (Urea, Sp36, KCl)", value: "tunggal_padi" },
-      { label: "Majemuk Phonska (16:16:16)", value: "phonska_16_padi" },
-      { label: "Majemuk Phonska (15:15:12)", value: "phonska_15_padi" },
-    ],
-  },
+export const VARIETAS_PADI: VarietasPupuk[] = [
+  'TUNGGAL',
+  'MAJEMUK_15_15_15',
+  'MAJEMUK_15_10_12',
+];
+
+export const VARIETAS_JAGUNG: VarietasPupuk[] = [
+  'TUNGGAL',
+  'MAJEMUK_15_15_15',
 ];
