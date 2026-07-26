@@ -1,4 +1,3 @@
-// app/(features)/(lokasi)/index.tsx
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -6,53 +5,42 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import ScreenHeader from "../../../components/ui/ScreenHeader";
 import { scale } from "../../../utils/scale";
+import { useLahanStore } from "../../../store/lahanStore"; // IMPORT ZUSTAND
 
 export default function LokasiPage() {
   const router = useRouter();
+  const setTempAlamat = useLahanStore((state) => state.setTempAlamat); // PANGGIL FUNGSI ZUSTAND
 
-  // State form lokasi murni manual
   const [provinsi, setProvinsi] = useState("");
   const [kota, setKota] = useState("");
   const [kecamatan, setKecamatan] = useState("");
   const [alamat, setAlamat] = useState("");
 
   function handleSimpan() {
-    // Validasi kosong
     if (!provinsi.trim() || !kota.trim() || !kecamatan.trim() || !alamat.trim()) {
       Alert.alert("Gagal Menyimpan", "Semua kolom wajib diisi!");
       return;
     }
 
-    // Gabungkan menjadi satu string
     const alamatLengkap = `${alamat}, ${kecamatan}, ${kota}, ${provinsi}`;
 
-    // Kirim data kembali ke halaman lahan menggunakan parameter
-    router.navigate({
-      pathname: "/(features)/(lahan)",
-      params: {
-        updatedAlamat: alamatLengkap,
-        // Kita kirim string kosong untuk koordinat karena fitur map dihapus
-        updatedLat: "", 
-        updatedLon: "",
-      },
-    } as any);
+    // TITIPKAN ALAMAT KE ZUSTAND, LALU MUNDUR 1 HALAMAN
+    setTempAlamat(alamatLengkap);
+    router.back(); 
   }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
       <ScreenHeader title="Lokasi" />
-
       <ScrollView 
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 15, paddingTop: scale(20), paddingBottom: scale(40), alignItems: "center" }}
       >
-        
         <InputField label="Alamat" value={alamat} onChangeText={setAlamat} placeholder="Contoh: Jl. Raya ITS" />
         <InputField label="Kecamatan" value={kecamatan} onChangeText={setKecamatan} placeholder="Masukkan Kecamatan" />
         <InputField label="Kota/Kabupaten" value={kota} onChangeText={setKota} placeholder="Masukkan Kota/Kabupaten" />
         <InputField label="Provinsi" value={provinsi} onChangeText={setProvinsi} placeholder="Masukkan Provinsi" />
 
-        {/* Simpan Button */}
         <Pressable onPress={handleSimpan} style={{ marginTop: scale(20) }}>
           <LinearGradient
             colors={["#105C2E", "#8C6A09"]}
@@ -63,7 +51,6 @@ export default function LokasiPage() {
             <Text style={{ color: "#FFFFFF", fontFamily: "PoppinsBold", fontSize: scale(20) }}>Simpan</Text>
           </LinearGradient>
         </Pressable>
-
       </ScrollView>
     </SafeAreaView>
   );

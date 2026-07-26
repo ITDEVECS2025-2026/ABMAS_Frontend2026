@@ -7,11 +7,11 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Sprout, Ruler, Target, CalendarClock, Map, MapPin } from "lucide-react-native";
 import MapView, { Marker, UrlTile } from "react-native-maps";
-import { saveLahan } from "../../../lib/lahanService";
 import ScreenHeader from "../../../components/ui/ScreenHeader";
 import SectionLabel from "../../../components/form/SectionLabel";
 import { scale } from "../../../utils/scale";
-import { getCurrentLocation, formatCoordinates, reverseGeocode } from "../../../utils/gps";
+import { getCurrentLocation, reverseGeocode } from "../../../utils/gps";
+import { useLahanStore } from "../../../store/lahanStore";
 
 const jagungIcon = require("../../../styles/assets/jagung icon.png");
 const padiIcon = require("../../../styles/assets/padi icon.png");
@@ -25,31 +25,44 @@ function formatTanggalInput(date: Date): string {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+function formatTanggalPanjang(date: Date): string {
+  return date.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export default function LahanBaruPage() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const initialNamaLahan = params.namaLahan ? String(params.namaLahan) : "Lahan Baru";
+  // FIX BUG NAMA LAHAN STUCK: Langsung baca dari params, buang useState-nya!
+  const namaLahan = params.namaLahan ? String(params.namaLahan) : "Lahan Baru";
 
-  const [namaLahan] = useState(initialNamaLahan);
   const [tanaman, setTanaman] = useState<Tanaman | null>(null);
   const [tanggalTanam, setTanggalTanam] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [luasLahan, setLuasLahan] = useState("");
   const [targetPanen, setTargetPanen] = useState("");
-  
+
   const [lokasi, setLokasi] = useState<{ lat: number; lon: number; alamat: string } | null>(null);
   const [alamatText, setAlamatText] = useState("Mencari lokasi...");
   const [koordinatText, setKoordinatText] = useState("");
-  
-  // State untuk melacak apakah lokasi diinput manual dari halaman Lokasi
+
   const [isManualLocation, setIsManualLocation] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  
+  // ZUSTAND STORE
+  const addLahan = useLahanStore((state) => state.addLahan);
+  const tempAlamat = useLahanStore((state) => state.tempAlamat);
+  const setTempAlamat = useLahanStore((state) => state.setTempAlamat);
 
   // 1. Menarik Lokasi Awal (GPS)
   useEffect(() => {
     (async () => {
-      // Jika sudah ada update alamat dari params (berarti kembali dari halaman Lokasi manual), batalkan tarik GPS
-      if (params.updatedAlamat) return;
+      // JIKA USER SUDAH INPUT MANUAL, JANGAN TIMPA PAKAI GPS!
+      if (tempAlamat) return;
 
       const location = await getCurrentLocation();
       if (!location) {
@@ -60,43 +73,60 @@ export default function LahanBaruPage() {
       const alamat = await reverseGeocode(location.latitude, location.longitude);
       setAlamatText(alamat);
       setLokasi({ lat: location.latitude, lon: location.longitude, alamat });
+      setIsManualLocation(false);
     })();
-  }, []);
+  }, [tempAlamat]);
 
-  // 2. Mendengarkan Perubahan dari Halaman LokasiPage (Input Manual)
+  // 2. Mendengarkan Perubahan dari Halaman LokasiPage (Input Manual via Zustand)
   useEffect(() => {
-    if (params.updatedAlamat) {
-      const newAlamat = params.updatedAlamat as string;
-
-      setIsManualLocation(true); // Tandai bahwa ini input manual untuk menyembunyikan peta
-      setAlamatText(newAlamat);
-      setKoordinatText(""); // Kosongkan koordinat karena diisi manual
-
-      // Simpan alamat, lat/lon dikosongkan (0)
-      setLokasi({ lat: 0, lon: 0, alamat: newAlamat });
+    if (tempAlamat) {
+      setIsManualLocation(true); 
+      setAlamatText(tempAlamat);
+      setKoordinatText(""); 
+      setLokasi({ lat: 0, lon: 0, alamat: tempAlamat });
     }
-  }, [params.updatedAlamat]);
+  }, [tempAlamat]);
 
   async function handleSimpan() {
-    // Proses ini akan menyimpan data ke dalam history / local storage
-    await saveLahan({
+    if (!tanaman) { setErrorMessage("Pilih tanaman terlebih dahulu (Jagung atau Padi)"); return; }
+    if (!tanggalTanam) { setErrorMessage("Tanggal tanam wajib diisi"); return; }
+    if (!luasLahan.trim()) { setErrorMessage("Luas lahan wajib diisi"); return; }
+    if (!targetPanen.trim()) { setErrorMessage("Target hasil panen wajib diisi"); return; }
+    if (!lokasi?.alamat) { setErrorMessage("Lokasi sawah belum terdeteksi, mohon tunggu atau atur manual"); return; }
+
+    setErrorMessage("");
+
+    // Simpan data ke Zustand (History Page)
+    addLahan({
       namaLahan,
-      tanaman: tanaman ?? "PADI",
-      tanggalTanam: tanggalTanam?.toISOString() ?? "",
+      tanaman: tanaman,
+      tanggalTanam: tanggalTanam.toISOString(),
       luasLahan: Number(luasLahan),
       targetPanen: Number(targetPanen),
       lokasi: {
-        provinsi: "",
-        kota: "",
-        kecamatan: "",
-        alamat: lokasi?.alamat ?? "",
-        lat: lokasi?.lat,
-        lon: lokasi?.lon,
+        alamat: lokasi.alamat,
+        lat: lokasi.lat,
+        lon: lokasi.lon,
       },
     });
 
-    // Pindah haluan ke halaman monitoring (bukan lagi ke history)
-    router.push("/(features)/(monitoring)" as any);
+    // PENTING: Bersihkan temp alamat manual agar GPS jalan lagi saat buat lahan baru!
+    setTempAlamat("");
+
+    // Lanjut ke Monitoring dengan membawa parameter
+    router.push({
+      pathname: "/(features)/(monitoring)",
+      params: {
+        namaLahan,
+        tanaman: tanaman ?? "PADI",
+        tanggalTanam: tanggalTanam ? formatTanggalPanjang(tanggalTanam) : "",
+        luasLahan,
+        targetPanen,
+        alamat: lokasi?.alamat ?? "",
+        lat: lokasi?.lat ? String(lokasi.lat) : "",
+        lon: lokasi?.lon ? String(lokasi.lon) : "",
+      },
+    } as any);
   }
 
   return (
@@ -110,7 +140,6 @@ export default function LahanBaruPage() {
           alignItems: "center",
         }}
       >
-        {/* Badge nama lahan */}
         <View
           style={{
             width: scale(202),
@@ -128,7 +157,6 @@ export default function LahanBaruPage() {
           </Text>
         </View>
 
-        {/* Pilih Tanaman */}
         <View style={{ width: scale(336), alignItems: "flex-start", alignSelf: "center", marginBottom: scale(20) }}>
           <SectionLabel icon={Sprout} label="Pilih Tanaman" />
           <View style={{ flexDirection: "row", gap: scale(16), marginTop: scale(12) }}>
@@ -137,7 +165,6 @@ export default function LahanBaruPage() {
           </View>
         </View>
 
-        {/* Tanggal Tanam */}
         <View style={{ width: scale(336), alignItems: "flex-start", alignSelf: "center", marginBottom: scale(20) }}>
           <SectionLabel icon={CalendarClock} label="Tanggal Tanam" />
           <Pressable
@@ -165,7 +192,6 @@ export default function LahanBaruPage() {
           )}
         </View>
 
-        {/* Luas Lahan */}
         <View style={{ width: scale(336), alignItems: "flex-start", alignSelf: "center", marginBottom: scale(20) }}>
           <SectionLabel icon={Ruler} label="Luas Lahan" />
           <View style={{
@@ -183,7 +209,6 @@ export default function LahanBaruPage() {
           </View>
         </View>
 
-        {/* Target Hasil Panen */}
         <View style={{ width: scale(336), alignItems: "flex-start", alignSelf: "center", marginBottom: scale(24) }}>
           <SectionLabel icon={Target} label="Target Hasil Panen" />
           <View style={{
@@ -201,19 +226,32 @@ export default function LahanBaruPage() {
           </View>
         </View>
 
-        {/* Lokasi Sawah */}
         <View style={{ marginBottom: scale(30) }}>
           <LokasiSawahCard
             alamat={alamatText}
             koordinat={koordinatText}
             lat={lokasi?.lat}
             lon={lokasi?.lon}
-            isManualLocation={isManualLocation} // Passing prop untuk menghilangkan map
+            isManualLocation={isManualLocation}
             onSesuaikanLokasi={() => router.push("/(features)/(lokasi)" as any)}
           />
         </View>
 
-        {/* Simpan Informasi Lahan */}
+        {errorMessage ? (
+          <Text
+            style={{
+              color: "#D32F2F",
+              fontFamily: "PoppinsMedium",
+              fontSize: scale(13),
+              textAlign: "center",
+              marginBottom: scale(12),
+              width: scale(300),
+            }}
+          >
+            {errorMessage}
+          </Text>
+        ) : null}
+
         <Pressable onPress={handleSimpan} style={{ marginBottom: scale(30) }}>
           <LinearGradient
             colors={["#105C2E", "#8C6A09"]}
@@ -291,7 +329,6 @@ function LokasiSawahCard({ alamat, koordinat, lat, lon, isManualLocation, onSesu
         </View>
       </View>
 
-      {/* Render map HANYA JIKA bukan dari input manual */}
       {!isManualLocation && (
         <View style={{ width: scale(336), height: scale(156), borderTopWidth: scale(0.403), borderTopColor: "#006134", overflow: "hidden", pointerEvents: "none" }}>
           {lat && lon ? (
