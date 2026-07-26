@@ -85,12 +85,15 @@ export default function AddLahanCard({
         inputRef.current?.focus();
     }
 
-    function handleSubmit() {
-        onSubmit();
-        inputRef.current?.blur();
-        setIsEditing(false);
-        router.push("/(features)/(lahan)" as any);
-    }
+function handleSubmit() {
+    onSubmit();
+    inputRef.current?.blur();
+    setIsEditing(false);
+    router.push({
+      pathname: "/(features)/(lahan)",
+      params: { namaLahan: value },
+    } as any);
+}
 
     return (
         <LinearGradient
@@ -111,6 +114,7 @@ export default function AddLahanCard({
                     flexDirection: "row",
                     alignItems: "center",
                     gap: scale(10),
+                    paddingLeft: scale(6)
                 }}
             >
                 <PlusCircleIcon />

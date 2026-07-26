@@ -1,7 +1,6 @@
-// app/(features)/(sensor)/_layout.tsx
 import { Stack } from "expo-router";
 
-export default function SensorLayout() {
+export default function VarietasLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="[id]" />
