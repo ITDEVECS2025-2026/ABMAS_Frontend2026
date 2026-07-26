@@ -14,7 +14,6 @@ export default function HistoryPage() {
       >
         History
       </Text>
-
     </SafeAreaView>
   );
 }
