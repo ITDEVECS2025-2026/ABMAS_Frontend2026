@@ -1,3 +1,4 @@
+//home page
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -6,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Button,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -82,6 +84,33 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
       </LinearGradient>
+      <View>
+
+      <Text>Halo, Pak Mateno</Text>
+
+      <Text>Homepage</Text>
+
+      <Button
+        title="Monitoring Tanah"
+        onPress={() => router.push("/(monitoring)")}
+      />
+
+      <Button
+        title="Tambah Lahan"
+        onPress={() => router.push("/(lahan)/tambah")}
+      />
+
+      <Button
+        title="History Pemupukan"
+        onPress={() => router.push("/(history)")}
+      />
+
+      <Button
+        title="Setting"
+        onPress={() => router.push("/(setting)")}
+      />
+
+    </View>
 
       {/* Status Card (Overlay Header) */}
       <View style={[styles.statusCard, { top: insets.top + 110 }]}>
