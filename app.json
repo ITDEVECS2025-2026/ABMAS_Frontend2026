@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "ABMA Soil",
+    "slug": "abma-soil",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "abma",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Aplikasi ini memerlukan akses GPS untuk mencatat posisi sensor di lahan sawah."
+      }
+    },
+    "android": {
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Izinkan ABMA mengakses GPS untuk sensor sawah."
+        }
+      ],
+      "expo-font",
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiSecretkey": "JANGANDIKASIHTAU"
+    }
+  }
+}
