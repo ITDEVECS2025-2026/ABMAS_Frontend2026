@@ -1,9 +1,9 @@
 // store/sensorContext.tsx
-import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
-import { Sensor, SensorLocation, FertilizerInput, AppSettings } from '../interfaces';
-import { fetchInitialSensors } from '../lib/api';
-import { createLiveSocket } from '../lib/socket';
-import { mapPayload, SensorUpdatePayload } from '../utils/mapPayload';
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from "react";
+import { Sensor, SensorLocation, FertilizerInput, AppSettings } from "../interfaces";
+import { fetchInitialSensors } from "../lib/api";
+import { createLiveSocket } from "../lib/socket";
+import { mapPayload, SensorUpdatePayload } from "../utils/mapPayload";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ─── Types & Constants ───────────────────────────────────────────────────────
@@ -16,11 +16,11 @@ interface SensorState {
 }
 
 type Action =
-  | { type: 'UPSERT_SENSORS'; sensors: Sensor[] }
-  | { type: 'SET_CONNECTED'; connected: boolean }
-  | { type: 'UPDATE_LOCATION'; sensorId: string; location: SensorLocation }
-  | { type: 'ADD_FERTILIZATION'; sensorId: string; input: FertilizerInput }
-  | { type: 'UPDATE_SETTINGS'; settings: Partial<AppSettings> };
+  | { type: "UPSERT_SENSORS"; sensors: Sensor[] }
+  | { type: "SET_CONNECTED"; connected: boolean }
+  | { type: "UPDATE_LOCATION"; sensorId: string; location: SensorLocation }
+  | { type: "ADD_FERTILIZATION"; sensorId: string; input: FertilizerInput }
+  | { type: "UPDATE_SETTINGS"; settings: Partial<AppSettings> };
 
 interface SensorContextValue {
   sensors: Sensor[];
@@ -34,14 +34,14 @@ interface SensorContextValue {
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 const DUMMY_SENSORS: Sensor[] = Array.from({ length: 5 }, (_, i) => ({
-  id: String(1+i),       // <-- UBAH JADI i + 1
+  id: String(1 + i), // <-- UBAH JADI i + 1
   name: `Sensor ${i + 1}`,
   soilData: { N: 0, P: 0, K: 0, EC: 0, pH: 0, temperature: 0, humidity: 0 },
   status: {
     battery: 0,
-    batteryHealth: '-',
-    loraStatus: 'Menunggu data...',
-    gps: 'No Fix',
+    batteryHealth: "-",
+    loraStatus: "Menunggu data...",
+    gps: "No Fix",
     voltage: 0,
     rssi: 0,
     statusCode: 0,
@@ -55,8 +55,8 @@ const initialState: SensorState = {
   sensors: DUMMY_SENSORS,
   settings: {
     debugMode: false,
-    connectionTopic: 'abmasoes/petani',
-    farmerName: 'PRIA SOLO REAL',
+    connectionTopic: "abmasoes/petani",
+    farmerName: "PRIA SOLO REAL",
     darkMode: true,
   },
   connected: false,
@@ -78,41 +78,39 @@ function upsertSensors(existing: Sensor[], incoming: Sensor[]): Sensor[] {
 // ─── Reducer ──────────────────────────────────────────────────────────────────
 function sensorReducer(state: SensorState, action: Action): SensorState {
   switch (action.type) {
-    case 'UPSERT_SENSORS':
+    case "UPSERT_SENSORS":
       return { ...state, sensors: upsertSensors(state.sensors, action.sensors) };
 
-    case 'SET_CONNECTED':
+    case "SET_CONNECTED":
       return { ...state, connected: action.connected };
 
-    case 'UPDATE_LOCATION':
+    case "UPDATE_LOCATION":
       return {
         ...state,
-        sensors: state.sensors.map((s) =>
-          s.id === action.sensorId ? { ...s, location: action.location } : s
-        ),
+        sensors: state.sensors.map((s) => (s.id === action.sensorId ? { ...s, location: action.location } : s)),
       };
 
-    case 'ADD_FERTILIZATION':
+    case "ADD_FERTILIZATION":
       return {
         ...state,
         sensors: state.sensors.map((s) =>
           s.id === action.sensorId
             ? {
-              ...s,
-              fertilizationHistory: [
-                {
-                  id: Date.now().toString(),
-                  date: Date.now(),
-                  ...action.input,
-                },
-                ...s.fertilizationHistory,
-              ],
-            }
-            : s
+                ...s,
+                fertilizationHistory: [
+                  {
+                    id: Date.now().toString(),
+                    date: Date.now(),
+                    ...action.input,
+                  },
+                  ...s.fertilizationHistory,
+                ],
+              }
+            : s,
         ),
       };
 
-    case 'UPDATE_SETTINGS':
+    case "UPDATE_SETTINGS":
       return {
         ...state,
         settings: { ...state.settings, ...action.settings },
@@ -155,18 +153,18 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
 
     fetchInitialSensors()
       .then((sensors) => {
-        if (active) dispatch({ type: 'UPSERT_SENSORS', sensors });
+        if (active) dispatch({ type: "UPSERT_SENSORS", sensors });
       })
       .catch((err) => {
-        console.warn('Initial sensor fetch failed:', err.message);
+        console.warn("Initial sensor fetch failed:", err.message);
         // Tetap pakai DUMMY_SENSORS yang sudah ada di initialState
       });
 
     const socket = createLiveSocket();
-    socket.on('connect', () => dispatch({ type: 'SET_CONNECTED', connected: true }));
-    socket.on('disconnect', () => dispatch({ type: 'SET_CONNECTED', connected: false }));
-    socket.on('sensor_upload', (payload: SensorUpdatePayload) => {
-      dispatch({ type: 'UPSERT_SENSORS', sensors: mapPayload(payload) });
+    socket.on("connect", () => dispatch({ type: "SET_CONNECTED", connected: true }));
+    socket.on("disconnect", () => dispatch({ type: "SET_CONNECTED", connected: false }));
+    socket.on("sensor_upload", (payload: SensorUpdatePayload) => {
+      dispatch({ type: "UPSERT_SENSORS", sensors: mapPayload(payload) });
     });
 
     return () => {
@@ -177,11 +175,11 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateSensorLocation = useCallback((sensorId: string, location: SensorLocation) => {
-    dispatch({ type: 'UPDATE_LOCATION', sensorId, location });
+    dispatch({ type: "UPDATE_LOCATION", sensorId, location });
   }, []);
 
   const addFertilizationRecord = useCallback((sensorId: string, input: FertilizerInput) => {
-    dispatch({ type: 'ADD_FERTILIZATION', sensorId, input });
+    dispatch({ type: "ADD_FERTILIZATION", sensorId, input });
   }, []);
 
   // 3. Fungsi tunggal untuk mengupdate state global dan menulis ke penyimpanan lokal
@@ -198,21 +196,15 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
           ...settings,
         };
 
-        await AsyncStorage.setItem(
-          SETTINGS_KEY,
-          JSON.stringify(newSettings)
-        );
+        await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
       } catch (e) {
         console.error("Gagal menyimpan pengaturan ke AsyncStorage:", e);
       }
     },
-    [state.settings]
+    [state.settings],
   );
 
-  const getSensorById = useCallback(
-    (id: string) => state.sensors.find((s) => s.id === id),
-    [state.sensors]
-  );
+  const getSensorById = useCallback((id: string) => state.sensors.find((s) => s.id === id), [state.sensors]);
 
   return (
     <SensorContext.Provider
@@ -234,7 +226,7 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
 export function useSensorStore(): SensorContextValue {
   const context = useContext(SensorContext);
   if (!context) {
-    throw new Error('useSensorStore harus dipakai di dalam <SensorProvider>');
+    throw new Error("useSensorStore harus dipakai di dalam <SensorProvider>");
   }
   return context;
 }

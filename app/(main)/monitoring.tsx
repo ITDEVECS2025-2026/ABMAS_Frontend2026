@@ -58,11 +58,7 @@ export default function MonitoringPage() {
 
             <SensorCard sensorId={sensor.id} />
 
-            <AddLahanCard
-              value={namaLahan}
-              onChangeText={setNamaLahan}
-              onSubmit={handleTambah}
-            />
+            <AddLahanCard value={namaLahan} onChangeText={setNamaLahan} onSubmit={handleTambah} />
           </View>
         )}
       </ScrollView>

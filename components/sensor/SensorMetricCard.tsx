@@ -1,24 +1,9 @@
 import React from "react";
 import { Text, View } from "react-native";
-import {
-  Sprout,
-  Leaf,
-  ShieldCheck,
-  Zap,
-  FlaskConical,
-  Thermometer,
-  Droplets,
-} from "lucide-react-native";
+import { Sprout, Leaf, ShieldCheck, Zap, FlaskConical, Thermometer, Droplets } from "lucide-react-native";
 import { scale } from "../../utils/scale";
 
-type MetricType =
-  | "N"
-  | "P"
-  | "K"
-  | "EC"
-  | "pH"
-  | "Suhu"
-  | "Kelembaban";
+type MetricType = "N" | "P" | "K" | "EC" | "pH" | "Suhu" | "Kelembaban";
 
 interface MetricCardProps {
   type: MetricType;
@@ -35,11 +20,7 @@ const UNITS: Record<MetricType, string> = {
   Kelembaban: "%",
 };
 
-export default function MetricCard({
-  type,
-  value,
-}: MetricCardProps) {
-
+export default function MetricCard({ type, value }: MetricCardProps) {
   const unit = UNITS[type];
   const iconSize = scale(18);
 
@@ -64,10 +45,7 @@ export default function MetricCard({
     }
   };
 
-  const isSmallCard =
-    type === "N" ||
-    type === "P" ||
-    type === "K";
+  const isSmallCard = type === "N" || type === "P" || type === "K";
 
   if (isSmallCard) {
     return (

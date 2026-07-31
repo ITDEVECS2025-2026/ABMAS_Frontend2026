@@ -52,7 +52,7 @@ export default function LahanBaruPage() {
 
   const [isManualLocation, setIsManualLocation] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  
+
   // ZUSTAND STORE
   const addLahan = useLahanStore((state) => state.addLahan);
   const tempAlamat = useLahanStore((state) => state.tempAlamat);
@@ -80,19 +80,34 @@ export default function LahanBaruPage() {
   // 2. Mendengarkan Perubahan dari Halaman LokasiPage (Input Manual via Zustand)
   useEffect(() => {
     if (tempAlamat) {
-      setIsManualLocation(true); 
+      setIsManualLocation(true);
       setAlamatText(tempAlamat);
-      setKoordinatText(""); 
+      setKoordinatText("");
       setLokasi({ lat: 0, lon: 0, alamat: tempAlamat });
     }
   }, [tempAlamat]);
 
   async function handleSimpan() {
-    if (!tanaman) { setErrorMessage("Pilih tanaman terlebih dahulu (Jagung atau Padi)"); return; }
-    if (!tanggalTanam) { setErrorMessage("Tanggal tanam wajib diisi"); return; }
-    if (!luasLahan.trim()) { setErrorMessage("Luas lahan wajib diisi"); return; }
-    if (!targetPanen.trim()) { setErrorMessage("Target hasil panen wajib diisi"); return; }
-    if (!lokasi?.alamat) { setErrorMessage("Lokasi sawah belum terdeteksi, mohon tunggu atau atur manual"); return; }
+    if (!tanaman) {
+      setErrorMessage("Pilih tanaman terlebih dahulu (Jagung atau Padi)");
+      return;
+    }
+    if (!tanggalTanam) {
+      setErrorMessage("Tanggal tanam wajib diisi");
+      return;
+    }
+    if (!luasLahan.trim()) {
+      setErrorMessage("Luas lahan wajib diisi");
+      return;
+    }
+    if (!targetPanen.trim()) {
+      setErrorMessage("Target hasil panen wajib diisi");
+      return;
+    }
+    if (!lokasi?.alamat) {
+      setErrorMessage("Lokasi sawah belum terdeteksi, mohon tunggu atau atur manual");
+      return;
+    }
 
     setErrorMessage("");
 
@@ -114,7 +129,7 @@ export default function LahanBaruPage() {
     setTempAlamat("");
 
     // Lanjut ke Monitoring dengan membawa parameter
-    router.push({
+    router.replace({
       pathname: "/(features)/(monitoring)",
       params: {
         namaLahan,
@@ -152,9 +167,7 @@ export default function LahanBaruPage() {
             marginBottom: scale(24),
           }}
         >
-          <Text style={{ color: "#FFFFFF", textAlign: "center", fontFamily: "PoppinsBold", fontSize: scale(18) }}>
-            {namaLahan}
-          </Text>
+          <Text style={{ color: "#FFFFFF", textAlign: "center", fontFamily: "PoppinsBold", fontSize: scale(18) }}>{namaLahan}</Text>
         </View>
 
         <View style={{ width: scale(336), alignItems: "flex-start", alignSelf: "center", marginBottom: scale(20) }}>
@@ -170,12 +183,23 @@ export default function LahanBaruPage() {
           <Pressable
             onPress={() => setShowDatePicker(true)}
             style={{
-              width: "100%", height: scale(53.89), borderRadius: scale(8.49), backgroundColor: "#FFFFFF", shadowColor: "#000000", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: scale(4), elevation: 3, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: scale(14), marginTop: scale(12),
+              width: "100%",
+              height: scale(53.89),
+              borderRadius: scale(8.49),
+              backgroundColor: "#FFFFFF",
+              shadowColor: "#000000",
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.5,
+              shadowRadius: scale(4),
+              elevation: 3,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingHorizontal: scale(14),
+              marginTop: scale(12),
             }}
           >
-            <Text style={{ color: "#1E1E1E", fontFamily: "PoppinsRegular", fontStyle: "italic", fontSize: scale(16) }}>
-              {tanggalTanam ? formatTanggalInput(tanggalTanam) : "dd/mm/yyyy"}
-            </Text>
+            <Text style={{ color: "#1E1E1E", fontFamily: "PoppinsRegular", fontStyle: "italic", fontSize: scale(16) }}>{tanggalTanam ? formatTanggalInput(tanggalTanam) : "dd/mm/yyyy"}</Text>
             <CalendarClock size={scale(22)} color="#1E1E1E" />
           </Pressable>
 
@@ -194,9 +218,24 @@ export default function LahanBaruPage() {
 
         <View style={{ width: scale(336), alignItems: "flex-start", alignSelf: "center", marginBottom: scale(20) }}>
           <SectionLabel icon={Ruler} label="Luas Lahan" />
-          <View style={{
-            width: "100%", height: scale(53.887), borderRadius: scale(8.49), backgroundColor: "#FFFFFF", shadowColor: "#000000", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: scale(4), elevation: 3, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: scale(14), marginTop: scale(12),
-          }}>
+          <View
+            style={{
+              width: "100%",
+              height: scale(53.887),
+              borderRadius: scale(8.49),
+              backgroundColor: "#FFFFFF",
+              shadowColor: "#000000",
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.5,
+              shadowRadius: scale(4),
+              elevation: 3,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingHorizontal: scale(14),
+              marginTop: scale(12),
+            }}
+          >
             <TextInput
               value={luasLahan}
               onChangeText={setLuasLahan}
@@ -211,9 +250,24 @@ export default function LahanBaruPage() {
 
         <View style={{ width: scale(336), alignItems: "flex-start", alignSelf: "center", marginBottom: scale(24) }}>
           <SectionLabel icon={Target} label="Target Hasil Panen" />
-          <View style={{
-            width: "100%", height: scale(53.887), borderRadius: scale(8.49), backgroundColor: "#FFFFFF", shadowColor: "#000000", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: scale(4), elevation: 3, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: scale(14), marginTop: scale(12),
-          }}>
+          <View
+            style={{
+              width: "100%",
+              height: scale(53.887),
+              borderRadius: scale(8.49),
+              backgroundColor: "#FFFFFF",
+              shadowColor: "#000000",
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.5,
+              shadowRadius: scale(4),
+              elevation: 3,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingHorizontal: scale(14),
+              marginTop: scale(12),
+            }}
+          >
             <TextInput
               value={targetPanen}
               onChangeText={setTargetPanen}
@@ -227,14 +281,7 @@ export default function LahanBaruPage() {
         </View>
 
         <View style={{ marginBottom: scale(30) }}>
-          <LokasiSawahCard
-            alamat={alamatText}
-            koordinat={koordinatText}
-            lat={lokasi?.lat}
-            lon={lokasi?.lon}
-            isManualLocation={isManualLocation}
-            onSesuaikanLokasi={() => router.push("/(features)/(lokasi)" as any)}
-          />
+          <LokasiSawahCard alamat={alamatText} koordinat={koordinatText} lat={lokasi?.lat} lon={lokasi?.lon} isManualLocation={isManualLocation} onSesuaikanLokasi={() => router.push("/(features)/(lokasi)" as any)} />
         </View>
 
         {errorMessage ? (
@@ -253,15 +300,8 @@ export default function LahanBaruPage() {
         ) : null}
 
         <Pressable onPress={handleSimpan} style={{ marginBottom: scale(30) }}>
-          <LinearGradient
-            colors={["#105C2E", "#8C6A09"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ width: scale(302.554), height: scale(48), borderRadius: scale(16), justifyContent: "center", alignItems: "center" }}
-          >
-            <Text style={{ color: "#FFFFFF", textAlign: "center", fontFamily: "PoppinsBold", fontSize: scale(20) }}>
-              Simpan Informasi Lahan
-            </Text>
+          <LinearGradient colors={["#105C2E", "#8C6A09"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: scale(302.554), height: scale(48), borderRadius: scale(16), justifyContent: "center", alignItems: "center" }}>
+            <Text style={{ color: "#FFFFFF", textAlign: "center", fontFamily: "PoppinsBold", fontSize: scale(20) }}>Simpan Informasi Lahan</Text>
           </LinearGradient>
         </Pressable>
       </ScrollView>
@@ -285,12 +325,33 @@ interface TanamanCardProps {
 function TanamanCard({ label, image, selected, onPress, imageWidth = 70, imageHeight = 80 }: TanamanCardProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const handlePressIn = () => { Animated.spring(scaleAnim, { toValue: 0.93, useNativeDriver: true }).start(); };
-  const handlePressOut = () => { Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 40, useNativeDriver: true }).start(); };
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, { toValue: 0.93, useNativeDriver: true }).start();
+  };
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 40, useNativeDriver: true }).start();
+  };
 
   return (
     <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-      <Animated.View style={{ transform: [{ scale: scaleAnim }], width: scale(160), height: scale(130), borderRadius: scale(10), backgroundColor: selected ? "#E9FBE0" : "#F7F9FC", borderWidth: selected ? scale(2) : 0, borderColor: "#58C15C", justifyContent: "center", alignItems: "center", shadowColor: "#000000", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: scale(4), elevation: 3 }}>
+      <Animated.View
+        style={{
+          transform: [{ scale: scaleAnim }],
+          width: scale(160),
+          height: scale(130),
+          borderRadius: scale(10),
+          backgroundColor: selected ? "#E9FBE0" : "#F7F9FC",
+          borderWidth: selected ? scale(2) : 0,
+          borderColor: "#58C15C",
+          justifyContent: "center",
+          alignItems: "center",
+          shadowColor: "#000000",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.3,
+          shadowRadius: scale(4),
+          elevation: 3,
+        }}
+      >
         <Image source={image} style={{ width: scale(imageWidth), height: scale(imageHeight), resizeMode: "contain", alignSelf: "center" }} />
         <Text style={{ fontFamily: "PoppinsBold", fontSize: scale(18.94), color: "#000000", marginTop: scale(4) }}>{label}</Text>
       </Animated.View>
@@ -321,11 +382,7 @@ function LokasiSawahCard({ alamat, koordinat, lat, lon, isManualLocation, onSesu
           <Text numberOfLines={2} style={{ color: "#1A202C", fontFamily: "PoppinsMedium", fontStyle: "italic", fontSize: scale(13) }}>
             {alamat}
           </Text>
-          {koordinat ? (
-            <Text style={{ color: "#4A5468", fontFamily: "PoppinsRegular", fontStyle: "italic", fontSize: scale(10), marginTop: scale(2) }}>
-              {koordinat}
-            </Text>
-          ) : null}
+          {koordinat ? <Text style={{ color: "#4A5468", fontFamily: "PoppinsRegular", fontStyle: "italic", fontSize: scale(10), marginTop: scale(2) }}>{koordinat}</Text> : null}
         </View>
       </View>
 
