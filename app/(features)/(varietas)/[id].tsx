@@ -61,28 +61,37 @@ export default function DataPemupukanPage() {
     const [errorMessage, setErrorMessage] = useState("");
 
     function handleRekomendasi() {
-        if (!tanggalMulai) {
-            setErrorMessage("Tanggal mulai pemupukan wajib diisi");
-            return;
-        }
-        if (!varietas) {
-            setErrorMessage("Pilih varietas terlebih dahulu");
-            return;
-        }
-
-        setErrorMessage(""); // Bersihkan pesan error jika validasi aman
-
-        router.push({
-            pathname: "/(features)/(rekomendasi)/[id]",
-            params: {
-                id,
-                namaLahan,
-                tanaman,
-                varietas,
-                tanggalMulai: tanggalMulai.toISOString(),
-            },
-        } as any);
+    if (!tanggalMulai) {
+        setErrorMessage("Tanggal mulai pemupukan wajib diisi");
+        return;
     }
+    if (!varietas) {
+        setErrorMessage("Pilih varietas terlebih dahulu");
+        return;
+    }
+
+    setErrorMessage("");
+
+    // Konversi varietas pupuk (TUNGGAL/MAJEMUK_...) jadi jenisPupuk + rasioNPK terpisah
+    const jenisPupuk = varietas === "TUNGGAL" ? "tunggal" : "majemuk";
+    const rasioNPK =
+        varietas === "MAJEMUK_15_15_15" ? "15:15:15" :
+        varietas === "MAJEMUK_15_10_12" ? "15:12:10" :
+        undefined;
+
+    router.push({
+        pathname: "/(features)/(rekomendasi)",
+        params: {
+            sensorId: id,
+            varietas: tanaman === "JAGUNG" ? "jagung" : "padi",
+            luasLahan,
+            targetHasilPanen: targetPanen,
+            jenisPupuk,
+            rasioNPK: rasioNPK ?? "",
+            tanggalMulai: tanggalMulai.toISOString(),
+        },
+    } as any);
+}
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
