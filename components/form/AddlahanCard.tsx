@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 interface AddLahanCardProps {
     value: string;
     onChangeText: (text: string) => void;
-    onSubmit: () => void;
+    onAdd: (nama: string) => void;
     placeholder?: string;
 }
 
@@ -74,7 +74,7 @@ function EditIcon() {
 export default function AddLahanCard({
     value,
     onChangeText,
-    onSubmit,
+    onAdd,
     placeholder = "Contoh : Lahan 1",
 }: AddLahanCardProps) {
     const [isEditing, setIsEditing] = useState(false);
@@ -86,7 +86,7 @@ export default function AddLahanCard({
     }
 
 function handleSubmit() {
-    onSubmit();
+    onAdd(value);
     inputRef.current?.blur();
     setIsEditing(false);
     router.push({
