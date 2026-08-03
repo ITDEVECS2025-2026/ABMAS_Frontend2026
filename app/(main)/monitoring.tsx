@@ -1,67 +1,90 @@
+// app/(features)/(main)/monitoring.tsx
 import React, { useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { ScrollView, Text, View } from "react-native";
-
-import { useSensorStore } from "@/store/sensorContext";
-import ScreenHeader from "../../components/ui/ScreenHeader";
-import SensorCard from "@/components/sensor/SensorCardGrid";
+import { View, Pressable, Text, ScrollView } from "react-native";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import ScreenHeader from "@/components/ui/ScreenHeader";
+import SectionHeader from "@/components/ui/SectionHeader";
 import AddLahanCard from "@/components/form/AddlahanCard";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocalSearchParams, } from "expo-router";
+
+const sensors = [
+  { id: "1", name: "Sensor 1" },
+  { id: "2", name: "Sensor 2" },
+  { id: "3", name: "Sensor 3" },
+  { id: "4", name: "Sensor 4" },
+  { id: "5", name: "Sensor 5" },
+];
 
 export default function MonitoringPage() {
-  const [namaLahan, setNamaLahan] = useState("");
-  const { sensors, connected } = useSensorStore();
+  const router = useRouter();
+  const [lahanName, setLahanName] = useState("");
 
-  // Ambil sensor pertama
-  const sensor = sensors[0];
+  const handlePressSensor = (id: string) => {
+    router.push({
+      pathname: "/(features)/(sensor)/[id]",
+      params: { id },
+    } as any);
+  };
 
-  function handleTambah() {
-    // TODO: panggil services/lahanService.ts -> saveLahan()
-    console.log("Simpan lahan:", namaLahan);
-  }
+  const handleAddLahan = (nama: string) => {
+    console.log("Lahan baru:", nama);
+    setLahanName("");
+  };
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-      }}
-    >
-      <ScreenHeader title="Sensor 1" />
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      <ScreenHeader title="Monitoring Tanah" />
 
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          alignItems: "center",
-          paddingBottom: 24,
-        }}
-      >
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 }}>
+        <SectionHeader title="Daftar Sensor" />
+
+        <View style={{ gap: 10, marginBottom: 16 }}>
+          {sensors.map((sensor) => (
+            <Pressable key={sensor.id} onPress={() => handlePressSensor(sensor.id)}>
+              <LinearGradient
+                colors={["#105C2E", "#2C8A40"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  height: 48,
+                  borderRadius: 10,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#FFFFFF",
+                    fontFamily: "PoppinsBold",
+                    fontSize: 16,
+                  }}
+                >
+                  {sensor.name}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          ))}
+        </View>
+
         <Text
           style={{
-            fontSize: 22,
-            fontFamily: "PoppinsBold",
-            marginTop: 40,
-            textAlign: "center",
+            color: "#4B5563",
+            fontFamily: "PoppinsRegular",
+            fontSize: 13,
+            marginBottom: 12,
           }}
         >
-          Monitoring
+          Dapatkan rekomendasi pemupukan dengan menambah lahan baru!
         </Text>
 
-        {sensor && (
-          <View
-            style={{
-              width: "100%",
-              padding: 16,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ marginBottom: 8 }}>{sensor.name}</Text>
-
-            <SensorCard sensorId={sensor.id} />
-
-            <AddLahanCard value={namaLahan} onChangeText={setNamaLahan} onSubmit={handleTambah} />
-          </View>
-        )}
+        <AddLahanCard
+          value={lahanName}
+          onChangeText={setLahanName}
+          onAdd={handleAddLahan}
+        />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

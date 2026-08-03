@@ -85,15 +85,18 @@ function r(val: number, dec = 2): number {
 
 // ── LAYER 1: WARNING (pH & EC) ────────────────────────────────
 
-function cekWarning(pH: number, EC: number): WarningItem[] {
+function cekWarning(pH: number, EC: number, varietas: Varietas): WarningItem[] {
   const warnings: WarningItem[] = [];
 
-  if (pH < 6.5) {
-    warnings.push({ status: "WARNING", pesan: `pH=${pH} < 6.5 => Tambahkan DOLOMIT untuk menaikkan pH` });
-  } else if (pH > 7.5) {
-    warnings.push({ status: "WARNING", pesan: `pH=${pH} > 7.5 => Tanah alkalin, tambahkan SULFUR` });
+  const batasRendah = varietas === "padi" ? 6.5 : 5.8;
+  const batasTinggi = varietas === "padi" ? 7.5 : 7.4;
+
+  if (pH < batasRendah) {
+    warnings.push({ status: "WARNING", pesan: `pH=${pH} < ${batasRendah} => Tambahkan DOLOMIT untuk menaikkan pH` });
+  } else if (pH > batasTinggi) {
+    warnings.push({ status: "WARNING", pesan: `pH=${pH} > ${batasTinggi} => Tanah alkalin, tambahkan SULFUR` });
   } else {
-    warnings.push({ status: "OK", pesan: `pH=${pH} normal (6.5-7.5)` });
+    warnings.push({ status: "OK", pesan: `pH=${pH} normal (${batasRendah}-${batasTinggi})` });
   }
 
   if (EC < 2.0) {
@@ -102,6 +105,16 @@ function cekWarning(pH: number, EC: number): WarningItem[] {
     warnings.push({ status: "WARNING", pesan: `EC=${EC} (2-3) => Monitoring salinitas tanaman` });
   } else {
     warnings.push({ status: "WARNING", pesan: `EC=${EC} > 3 => Potensi penurunan produktivitas` });
+  }
+
+  // Kondisi gabungan: pH & EC keduanya bermasalah
+  const phBermasalah = pH < batasRendah || pH > batasTinggi;
+  const ecBermasalah = EC > 2.0;
+  if (phBermasalah && ecBermasalah) {
+    warnings.push({
+      status: "WARNING",
+      pesan: `Kondisi tanah tidak optimal => pH dan salinitas berada di luar batas normal, perlu penanganan segera`,
+    });
   }
 
   return warnings;
@@ -299,7 +312,7 @@ export function runRuleEngine(input: RuleEngineInput): RuleEngineOutput {
   const { N, P, K, EC, pH, varietas, luas, targetPanen, jenisPupuk, rasioNPK } = input;
 
   // Layer 1 — Warning
-  const warnings = cekWarning(pH, EC);
+  const warnings = cekWarning(pH, EC, varietas);
 
   // Layer 2 — Target panen
   const { ureaPerHa, produktivitas } = ureaFromTarget(targetPanen);
