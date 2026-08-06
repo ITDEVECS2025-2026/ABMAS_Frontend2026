@@ -32,7 +32,7 @@ export default function HistoryPage() {
   // Fungsi Klik Kartu: Pindah ke Monitoring & bawa ID lahan
   const handleCardPress = (id: string) => {
     router.push({
-      pathname: "/(features)/(monitoring)",
+      pathname: "/(features)/(history)",
       params: { idLahan: id },
     });
   };
@@ -84,7 +84,7 @@ export default function HistoryPage() {
           <AddLahanCard
             value={newLahanInput}
             onChangeText={setNewLahanInput}
-            onSubmit={() => {
+            onAdd={() => {
               // Kosongkan karena komponen katingmu sudah otomatis nge-push halaman
               console.log("Menyiapkan lahan baru...");
             }}

@@ -88,29 +88,37 @@ export default function LahanBaruPage() {
   }, [tempAlamat]);
 
   async function handleSimpan() {
+    console.log("TEST: mencoba navigasi langsung");
+    router.replace("/(features)/(monitoring)" as any);
     if (!tanaman) {
+      console.log("GAGAL: tanaman kosong");
       setErrorMessage("Pilih tanaman terlebih dahulu (Jagung atau Padi)");
       return;
     }
     if (!tanggalTanam) {
+      console.log("GAGAL: tanggal kosong");
       setErrorMessage("Tanggal tanam wajib diisi");
       return;
     }
     if (!luasLahan.trim()) {
+      console.log("GAGAL: luas lahan kosong");
       setErrorMessage("Luas lahan wajib diisi");
       return;
     }
     if (!targetPanen.trim()) {
+      console.log("GAGAL: target panen kosong");
       setErrorMessage("Target hasil panen wajib diisi");
       return;
     }
     if (!lokasi?.alamat) {
+      console.log("GAGAL: lokasi belum ada", lokasi);
       setErrorMessage("Lokasi sawah belum terdeteksi, mohon tunggu atau atur manual");
       return;
     }
 
+    console.log("SEMUA VALID, lanjut simpan & navigasi...");
     setErrorMessage("");
-
+    // ...sisa kode tidak berubah
     // Simpan data ke Zustand (History Page)
     addLahan({
       namaLahan,
@@ -124,23 +132,25 @@ export default function LahanBaruPage() {
         lon: lokasi.lon,
       },
     });
-
+    const idLahan = addLahan({
+      namaLahan,
+      tanaman: tanaman!,
+      tanggalTanam: tanggalTanam!.toISOString(),
+      luasLahan: Number(luasLahan),
+      targetPanen: Number(targetPanen),
+      lokasi: {
+        alamat: lokasi!.alamat,
+        lat: lokasi!.lat,
+        lon: lokasi!.lon,
+      },
+    });
     // PENTING: Bersihkan temp alamat manual agar GPS jalan lagi saat buat lahan baru!
     setTempAlamat("");
 
     // Lanjut ke Monitoring dengan membawa parameter
     router.replace({
       pathname: "/(features)/(monitoring)",
-      params: {
-        namaLahan,
-        tanaman: tanaman ?? "PADI",
-        tanggalTanam: tanggalTanam ? formatTanggalPanjang(tanggalTanam) : "",
-        luasLahan,
-        targetPanen,
-        alamat: lokasi?.alamat ?? "",
-        lat: lokasi?.lat ? String(lokasi.lat) : "",
-        lon: lokasi?.lon ? String(lokasi.lon) : "",
-      },
+      params: { idLahan },
     } as any);
   }
 

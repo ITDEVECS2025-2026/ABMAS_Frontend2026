@@ -1,5 +1,6 @@
 // lib/lahanService.ts
 import { Lahan } from '../interfaces';
+import { LahanRekapPayload } from '../interfaces';
 
 // ⚠️ SEMENTARA: backend endpoint /lahan belum tersedia.
 // Data disimpan di memory (hilang saat app di-restart), hanya untuk keperluan development.
