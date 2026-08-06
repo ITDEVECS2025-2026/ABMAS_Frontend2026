@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   View,
   TouchableOpacity,
@@ -25,7 +26,7 @@ const TAB_WIDTH = width / 3;
 
 export default function BottomNavbar() {
   const router = useRouter();
-
+  const insets = useSafeAreaInsets();
   // 0 = Home
   // 1 = History
   // 2 = Monitoring
@@ -110,15 +111,13 @@ export default function BottomNavbar() {
         bottom: 0,
         left: 0,
         right: 0,
-
         width: "100%",
-        height: 60,
-
+        height: 60 + insets.bottom,
+        paddingBottom: insets.bottom,
         zIndex: 9999,
         elevation: 9999,
       }}
     >
-
       {/* ======================================== */}
       {/* BACKGROUND NAVBAR */}
       {/* ======================================== */}
@@ -133,7 +132,7 @@ export default function BottomNavbar() {
           y: 0,
         }}
         end={{
-          x: 1,
+          x: 1.5,
           y: 0,
         }}
         style={{
