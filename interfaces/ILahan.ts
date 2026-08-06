@@ -19,3 +19,16 @@ export interface Lahan {
   targetPanen: number;
   lokasi: Lokasi;
 }
+
+export interface RentangSensorId {
+  dari: number;
+  sampai: number;
+}
+
+export interface LahanRekapPayload {
+  namaLahan: string;
+  hektarLahan: number;
+  targetPanen: number;
+  hasilPanen: number;
+  rentangSensorId: RentangSensorId;
+}

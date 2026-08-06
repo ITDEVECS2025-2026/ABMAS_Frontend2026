@@ -7,16 +7,18 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import MapView, { Marker, UrlTile } from "react-native-maps";
 import { CalendarClock, Sprout, MapPin, ChevronDown, ChevronUp, Ruler, Target } from "lucide-react-native";
-
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import SensorCard from "@/components/sensor/SensorCardGrid";
 import { scale } from "@/utils/scale";
 import { getTimeAgo } from "@/utils/gps";
 import { useSensorStore } from "@/store/sensorContext";
 import { VARIETAS_PADI, VARIETAS_JAGUNG, VarietasPupuk } from "@/constants/pupukData";
+import { useLahanStore } from "@/store/lahanStore";
+import { API_URL } from "@/lib/config";
 
 const jagungIcon = require("../../../styles/assets/jagung icon.png");
 const padiIcon = require("../../../styles/assets/padi icon.png");
+const [sensorIdAwal, setSensorIdAwal] = useState<number | null>(null);
 
 const VARIETAS_LABEL: Record<VarietasPupuk, string> = {
     TUNGGAL: "Tunggal (Urea, Sp36, KcL)",
@@ -35,7 +37,7 @@ export default function DataPemupukanPage() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
     const params = useLocalSearchParams();
-
+    const setRentangSensorId = useLahanStore((state) => state.setRentangSensorId);
     // Mengambil data sensor dari context/store global
     const { getSensorById } = useSensorStore();
     const sensor = getSensorById(id as string);
@@ -59,39 +61,47 @@ export default function DataPemupukanPage() {
     const [varietas, setVarietas] = useState<VarietasPupuk | null>(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+    const idLahan = params.idLahan
+        ? String(params.idLahan)
+        : "";
 
     function handleRekomendasi() {
-    if (!tanggalMulai) {
-        setErrorMessage("Tanggal mulai pemupukan wajib diisi");
-        return;
+        if (!tanggalMulai) {
+            setErrorMessage("Tanggal mulai pemupukan wajib diisi");
+            return;
+        }
+        if (!varietas) {
+            setErrorMessage("Pilih varietas terlebih dahulu");
+            return;
+        }
+
+        setErrorMessage("");
+
+        // Konversi varietas pupuk (TUNGGAL/MAJEMUK_...) jadi jenisPupuk + rasioNPK terpisah
+        const jenisPupuk = varietas === "TUNGGAL" ? "tunggal" : "majemuk";
+        const rasioNPK =
+            varietas === "MAJEMUK_15_15_15" ? "15:15:15" :
+                varietas === "MAJEMUK_15_10_12" ? "15:12:10" :
+                    undefined;
+
+        setRentangSensorId(idLahan, {
+            dari: Number(id),
+            sampai: Number(id),
+        });
+
+        router.push({
+            pathname: "/(features)/(rekomendasi)",
+            params: {
+                sensorId: id,
+                varietas: tanaman === "JAGUNG" ? "jagung" : "padi",
+                luasLahan,
+                targetHasilPanen: targetPanen,
+                jenisPupuk,
+                rasioNPK: rasioNPK ?? "",
+                tanggalMulai: tanggalMulai.toISOString(),
+            },
+        } as any);
     }
-    if (!varietas) {
-        setErrorMessage("Pilih varietas terlebih dahulu");
-        return;
-    }
-
-    setErrorMessage("");
-
-    // Konversi varietas pupuk (TUNGGAL/MAJEMUK_...) jadi jenisPupuk + rasioNPK terpisah
-    const jenisPupuk = varietas === "TUNGGAL" ? "tunggal" : "majemuk";
-    const rasioNPK =
-        varietas === "MAJEMUK_15_15_15" ? "15:15:15" :
-        varietas === "MAJEMUK_15_10_12" ? "15:12:10" :
-        undefined;
-
-    router.push({
-        pathname: "/(features)/(rekomendasi)",
-        params: {
-            sensorId: id,
-            varietas: tanaman === "JAGUNG" ? "jagung" : "padi",
-            luasLahan,
-            targetHasilPanen: targetPanen,
-            jenisPupuk,
-            rasioNPK: rasioNPK ?? "",
-            tanggalMulai: tanggalMulai.toISOString(),
-        },
-    } as any);
-}
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>

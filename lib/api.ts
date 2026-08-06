@@ -80,3 +80,30 @@ catch (error) {
     throw error;
   }
 }
+
+export interface HarvestPayload {
+  namaLahan: string;
+  luasLahan: number;
+  targetPanen: number;
+  hasilPanen: number;
+  sensorIdAwal: number;
+  sensorIdAkhir: number;
+}
+
+export async function saveHarvestData(payload: HarvestPayload) {
+  const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
+
+  const response = await fetch("http://8.215.14.48:8252/harvest", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": SECRET_KEY || "",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP Error ${response.status}`);
+  }
+    console.log("Berhasil mengirim data panen");
+}

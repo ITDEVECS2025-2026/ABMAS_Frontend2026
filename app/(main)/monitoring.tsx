@@ -6,7 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import SectionHeader from "@/components/ui/SectionHeader";
 import AddLahanCard from "@/components/form/AddlahanCard";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, } from "expo-router";
 
 const sensors = [
@@ -34,7 +34,7 @@ export default function MonitoringPage() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
       <ScreenHeader title="Monitoring Tanah" />
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 }}>
@@ -85,6 +85,6 @@ export default function MonitoringPage() {
           onAdd={handleAddLahan}
         />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

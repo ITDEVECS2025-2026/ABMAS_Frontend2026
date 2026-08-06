@@ -1,27 +1,27 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import MapView, { Marker, UrlTile } from "react-native-maps";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  Leaf,
   FlaskConical,
-  Pencil,
+  Leaf,
   MapPin,
+  Pencil,
 } from "lucide-react-native";
+import React from "react";
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import MapView, { Marker, UrlTile } from "react-native-maps";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import ScreenHeader from "@/components/ui/ScreenHeader";
 import SensorCard from "@/components/sensor/SensorCardGrid";
+import StatusSensorCard from "@/components/sensor/StatusSensorCard";
+import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useSensorStore } from "@/store/sensorContext";
 import { getTimeAgo } from "@/utils/gps";
 import { scale } from "@/utils/scale";
-import StatusSensorCard from "@/components/sensor/StatusSensorCard";
 
 const CARD_WIDTH = 336; // lebar seragam untuk semua section (samakan dengan Lokasi Sawah)
 
