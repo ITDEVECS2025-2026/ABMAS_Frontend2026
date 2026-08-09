@@ -1,11 +1,23 @@
 import { Sensor, SensorLocation } from '../interfaces';
 
-// Per-node fields broadcast by the backend (see SensorPayloadDto on the server).
+// Bentuk data MENTAH yang dikirim backend lewat socket (field nodeId, bukan id)
+interface RawNodePayload {
+  nodeId: number;
+  n?: number; p?: number; k?: number;
+  ec?: number; ph?: number;
+  t?: number; h?: number;
+  la?: number; lo?: number;
+  vb?: number; bt?: number;
+  st: number;
+  er?: number; rssi?: number;
+}
+
+// Bentuk data yang sudah matang, dipakai mapNode() secara internal
 export interface NodeReading {
   id: string;
   n?: number; p?: number; k?: number;
   ec?: number; ph?: number;
-  t?: number; h?: number;        // ← tambah
+  t?: number; h?: number;
   la?: number; lo?: number;
   vb?: number; bt?: number;
   st: number;
@@ -18,7 +30,7 @@ export interface SensorUpdatePayload {
   data: {
     groupId: string;
     ts: number;
-    nodes: (NodeReading & { id: number })[];
+    nodes: RawNodePayload[];   // 👈 pakai bentuk mentah di sini
   };
 }
 
@@ -33,14 +45,12 @@ function toLocation(node: NodeReading, ts: number): SensorLocation | null {
   return { latitude: node.la, longitude: node.lo, timestamp: ts };
 }
 
-
 // Map one node (main or sub) onto the Sensor shape the screens already consume.
 export function mapNode(node: NodeReading, ts: number, kind: 'Main' | 'Sub'): Sensor {
   const battery = node.bt ?? 0;
   const hasGps = typeof node.la === 'number' && typeof node.lo === 'number'
     && node.la !== 0 && node.lo !== 0;
 
-    
   return {
     id: node.id,
     name: `Sensor ${node.id}`,
@@ -50,17 +60,17 @@ export function mapNode(node: NodeReading, ts: number, kind: 'Main' | 'Sub'): Se
       K: node.k ?? 0,
       EC: node.ec ?? 0,
       pH: node.ph ?? 0,
-      temperature: node.t ?? 0,   // ← tambah
-      humidity: node.h ?? 0,      // ← tambah
+      temperature: node.t ?? 0,
+      humidity: node.h ?? 0,
     },
     status: {
       battery,
       batteryHealth: batteryHealth(battery),
       loraStatus: node.st === 0 ? 'Disconnected' : 'Connected',
       gps: hasGps ? 'Active' : 'No Fix',
-      voltage: node.vb ?? 0,      // ← tambah
-      rssi: node.rssi ?? 0,       // ← tambah
-      statusCode: node.st ?? 0,   // ← tambah
+      voltage: node.vb ?? 0,
+      rssi: node.rssi ?? 0,
+      statusCode: node.st ?? 0,
     },
     location: hasGps ? toLocation(node, ts) : null,
     lastUpdated: ts,
@@ -77,11 +87,9 @@ export function mapPayload(payload: SensorUpdatePayload): Sensor[] {
 
   return payload.data.nodes.map((node) =>
     mapNode(
-      { ...node, id: String(node.id) },
+      { ...node, id: String(node.nodeId) },   // konversi nodeId (mentah) -> id (matang)
       ts,
-      node.id === 0 ? "Main" : "Sub"
+      node.nodeId === 0 ? "Main" : "Sub"
     )
   );
 }
-
-

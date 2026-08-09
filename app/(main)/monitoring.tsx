@@ -10,11 +10,11 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { useLocalSearchParams, } from "expo-router";
 
 const sensors = [
-  { id: "1", name: "Sensor 1" },
-  { id: "2", name: "Sensor 2" },
-  { id: "3", name: "Sensor 3" },
-  { id: "4", name: "Sensor 4" },
-  { id: "5", name: "Sensor 5" },
+  { id: "0", name: "Sensor 1" },
+  { id: "1", name: "Sensor 2" },
+  { id: "2", name: "Sensor 3" },
+  { id: "3", name: "Sensor 4" },
+  { id: "4", name: "Sensor 5" },
 ];
 
 export default function MonitoringPage() {

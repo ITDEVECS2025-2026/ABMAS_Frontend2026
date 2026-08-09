@@ -226,7 +226,7 @@ export default function MonitoringLahanTersimpanPage() {
                   router.push({
                     pathname: "/(features)/(sensor)/[id]",
                     params: {
-                      id: payloadId, // ✅ kirim id payload asli, bukan nomor tampilan
+                      id: payloadId, 
                       idLahan,
                       namaLahan,
                       tanaman,

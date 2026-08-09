@@ -33,7 +33,11 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiSecretkey": "JANGANDIKASIHTAU"
+      "apiSecretkey": "JANGANDIKASIHTAU",
+      "router": {},
+      "eas": {
+        "projectId": "17cb1b8c-b5d9-42ad-97f6-3e8cf3f00827"
+      }
     }
   }
 }

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useEffect } from "react";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import {
   View, Text, StyleSheet, ScrollView,
@@ -13,6 +13,7 @@ import {
   Varietas, JenisPupuk, RasioNPK,
   JadwalFaseTunggal, JadwalFaseMajemukPadi, JadwalFaseMajemukJagung,
 } from "@/utils/ruleEngine";
+import { useRekomendasiStore } from "@/store/rekomendasiStore";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const CARD_WIDTH = SCREEN_WIDTH - 32;
@@ -30,7 +31,7 @@ export default function RekomendasiScreen() {
 
   const { getSensorById } = useSensorStore();
   const sensor = getSensorById(params.sensorId);
-
+  const setRekomendasi = useRekomendasiStore((state) => state.setRekomendasi);
   const varietas = (params.varietas as Varietas) ?? "padi";
   const jenisPupuk = (params.jenisPupuk as JenisPupuk) ?? "tunggal";
   const rasioNPK = params.rasioNPK as RasioNPK | undefined;
@@ -67,6 +68,13 @@ export default function RekomendasiScreen() {
       </SafeAreaView>
     );
   }
+
+  useEffect(() => {
+    if (hasil && params.sensorId) {
+      setRekomendasi(params.sensorId, hasil);
+      console.log(`✅ Rekomendasi untuk sensor ${params.sensorId} tersimpan di store!`);
+    }
+  }, [hasil, params.sensorId, setRekomendasi]);
 
   const isMajemuk = jenisPupuk === "majemuk";
   const judulVarietas = varietas === "padi" ? "Padi" : "Jagung";
