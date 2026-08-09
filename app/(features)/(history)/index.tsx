@@ -141,13 +141,20 @@ export default function MonitoringLahanTersimpanPage() {
                             onPress={async () => {
                                 try {
                                     await saveHarvestData({
-                                        namaLahan,
-                                        luasLahan: Number(luasLahan),
-                                        targetPanen: Number(targetPanen),
-                                        hasilPanen: Number(inputHasilPanen),
+                                        namaLahan: namaLahan,
+                                        tanaman: tanaman,
+                                        tanggalTanam: dataLahanStore?.tanggalTanam
+                                            ? new Date(dataLahanStore.tanggalTanam).toISOString()
+                                            : new Date().toISOString(),
+                                        luasLahan: Number(luasLahan) || 0,
+                                        targetPanen: Number(targetPanen) || 0,
+                                        hasilPanenAktual: Number(inputHasilPanen) || 0,
 
-                                        sensorIdAwal: rentangSensor?.dari ?? 0,
-                                        sensorIdAkhir: rentangSensor?.sampai ?? 0,
+                                        // 👇 Tambahkan objek rentangSensor di sini (diubah jadi string)
+                                        rentangSensor: {
+                                            sensorIdAwal: String(rentangSensor?.dari ?? 0),
+                                            sensorIdAkhir: String(rentangSensor?.sampai ?? 0)
+                                        }
                                     });
 
                                     setIsModalPanenVisible(false);

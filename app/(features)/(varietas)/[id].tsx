@@ -18,8 +18,6 @@ import { API_URL } from "@/lib/config";
 
 const jagungIcon = require("../../../styles/assets/jagung icon.png");
 const padiIcon = require("../../../styles/assets/padi icon.png");
-const [sensorIdAwal, setSensorIdAwal] = useState<number | null>(null);
-
 const VARIETAS_LABEL: Record<VarietasPupuk, string> = {
     TUNGGAL: "Tunggal (Urea, Sp36, KcL)",
     MAJEMUK_15_15_15: "Majemuk Phonska (15:15:15)",
@@ -41,6 +39,7 @@ export default function DataPemupukanPage() {
     // Mengambil data sensor dari context/store global
     const { getSensorById } = useSensorStore();
     const sensor = getSensorById(id as string);
+    const [sensorIdAwal, setSensorIdAwal] = useState<number | null>(null);
 
     // Mengecek apakah sensor memiliki lokasi valid
     const hasLocation = !!sensor?.location && sensor.location.latitude !== 0 && sensor.location.longitude !== 0;

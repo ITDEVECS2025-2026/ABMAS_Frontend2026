@@ -83,17 +83,21 @@ catch (error) {
 
 export interface HarvestPayload {
   namaLahan: string;
+  tanaman: string;
+  tanggalTanam: string;
   luasLahan: number;
   targetPanen: number;
-  hasilPanen: number;
-  sensorIdAwal: number;
-  sensorIdAkhir: number;
+  hasilPanenAktual: number;
+  rentangSensor: {
+    sensorIdAwal: string;
+    sensorIdAkhir: string;
+  };
 }
 
 export async function saveHarvestData(payload: HarvestPayload) {
   const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
-
-  const response = await fetch("http://8.215.14.48:8252/harvest", {
+console.log("PAYLOAD YANG DIKIRIM:", JSON.stringify(payload, null, 2));
+  const response = await fetch("http://8.215.14.48:8252/history", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -102,8 +106,11 @@ export async function saveHarvestData(payload: HarvestPayload) {
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    throw new Error(`HTTP Error ${response.status}`);
+if (!response.ok) {
+    // 🔍 Cek pesan error dari backend jika ada
+    const errorBody = await response.text();
+    console.error("DETAIL ERROR DARI SERVER:", errorBody);
+    throw new Error(`HTTP Error ${response.status}: ${errorBody}`);
   }
     console.log("Berhasil mengirim data panen");
 }

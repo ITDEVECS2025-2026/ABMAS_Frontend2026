@@ -35,7 +35,7 @@ interface SensorContextValue {
 // ─── Initial State ────────────────────────────────────────────────────────────
 const DUMMY_SENSORS: Sensor[] = Array.from({ length: 5 }, (_, i) => ({
   id: String(1 + i), // <-- UBAH JADI i + 1
-  name: `Sensor ${i + 1}`,
+  name: `Sensor ${i}`,
   soilData: { N: 0, P: 0, K: 0, EC: 0, pH: 0, temperature: 0, humidity: 0 },
   status: {
     battery: 0,
