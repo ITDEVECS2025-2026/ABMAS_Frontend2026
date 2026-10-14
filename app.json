@@ -9,10 +9,14 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Aplikasi ini memerlukan akses GPS untuk mencatat posisi sensor di lahan sawah."
+        "NSLocationWhenInUseUsageDescription": "Aplikasi ini memerlukan akses GPS untuk mencatat posisi sensor di lahan sawah.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       }
     },
     "android": {
+      "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"

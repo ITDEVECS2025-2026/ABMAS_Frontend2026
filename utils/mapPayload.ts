@@ -28,7 +28,6 @@ export interface NodeReading {
 export interface SensorUpdatePayload {
   event: string;
   data: {
-    groupId: string;
     ts: number;
     nodes: RawNodePayload[];   // 👈 pakai bentuk mentah di sini
   };

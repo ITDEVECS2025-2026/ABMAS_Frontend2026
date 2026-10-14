@@ -1,9 +1,10 @@
-import { API_URL} from './config';
+import { API_URL } from './config';
 import { Sensor } from '../interfaces';
 import { mapNode } from '../utils/mapPayload';
 
-interface NodePayload {
-  id: number;
+export interface NodePayload {
+  nodeId: number;
+  createdAt: string;
   n: number; p: number; k: number;
   ec: number; ph: number;
   t: number; h: number;
@@ -12,70 +13,48 @@ interface NodePayload {
   rssi: number; st: number;
 }
 
-interface TelemetryResponse {
-  event: string;
-  data: {
-    groupId: string;
-    ts: number;
-    nodes: NodePayload[];
-  };
-}
-
 export async function fetchInitialSensors(): Promise<Sensor[]> {
-  //   const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL; 
   const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
-  console.log("SENDING API KEY:", SECRET_KEY); // Check your Expo terminal for this
-
-  // 1. Prepare your headers
-  const headers = {
-    'Content-Type': 'application/json',
-    'x-api-key': SECRET_KEY || '',
-  };
 
   try {
-    // 2. Make the fetch request inside the try block
-    const response = await fetch(API_URL, {
+    // 1. Tambahkan /telemetry di sini
+    const response = await fetch(`${API_URL}/telemetry`, {
       method: 'GET',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': SECRET_KEY || '',
+      },
     });
 
-    // 3. Check for HTTP errors immediately before parsing JSON
     if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+      throw new Error(`HTTP Error: ${response.status}${response.statusText}`);
     }
 
-    // 4. Parse the response as JSON
-    const nodes = await response.json();
-    console.log("DATA:", nodes);
+    const nodes: NodePayload[] = await response.json();
 
-  // payload mapping
-  return nodes.map((node: any) =>
-    mapNode(
-  {
-    id: String(node.nodeId),
-    n: node.n,
-    p: node.p,
-    k: node.k,
-    ec: node.ec,
-    ph: node.ph,
-
-    t: node.t,
-    h: node.h,
-
-    la: node.la,
-    lo: node.lo,
-    bt: node.bt,
-    vb: node.vb,
-    rssi: node.rssi,
-    st: node.st,
-  },
-      new Date(node.createdAt).getTime(),
-      node.nodeId === 0 ? "Main" : "Sub"
-    )
-  );
-}
-catch (error) {
-    // 6. Properly catch any network drops or thrown errors here
+    return nodes.map((node) =>
+      mapNode(
+        {
+          id: String(node.nodeId),
+          n: node.n,
+          p: node.p,
+          k: node.k,
+          ec: node.ec,
+          ph: node.ph,
+          t: node.t,
+          h: node.h,
+          la: node.la,
+          lo: node.lo,
+          bt: node.bt,
+          vb: node.vb,
+          rssi: node.rssi,
+          st: node.st,
+        },
+        new Date(node.createdAt).getTime(),
+        node.nodeId === 0 ? "Main" : "Sub"
+      )
+    );
+  } catch (error) {
     console.error(`[API Fetch Error]:`, error);
     throw error;
   }
@@ -96,8 +75,9 @@ export interface HarvestPayload {
 
 export async function saveHarvestData(payload: HarvestPayload) {
   const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
-console.log("PAYLOAD YANG DIKIRIM:", JSON.stringify(payload, null, 2));
-  const response = await fetch("http://8.215.14.48:8252/history", {
+  
+  // 2. Gunakan API_URL dan tambahkan /record di sini (jangan di-hardcode lagi)
+  const response = await fetch(`${API_URL}/history`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -106,11 +86,11 @@ console.log("PAYLOAD YANG DIKIRIM:", JSON.stringify(payload, null, 2));
     body: JSON.stringify(payload),
   });
 
-if (!response.ok) {
-    // 🔍 Cek pesan error dari backend jika ada
+  if (!response.ok) {
     const errorBody = await response.text();
     console.error("DETAIL ERROR DARI SERVER:", errorBody);
-    throw new Error(`HTTP Error ${response.status}: ${errorBody}`);
+    throw new Error(`HTTP Error ${response.status}:${errorBody}`);
   }
-    console.log("Berhasil mengirim data panen");
+  
+  console.log("Berhasil mengirim data panen");
 }
