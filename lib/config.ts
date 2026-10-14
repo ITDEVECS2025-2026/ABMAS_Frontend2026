@@ -1,9 +1,9 @@
-// Central place for the server address.
-//
-// There is no device discovery: the app and the IoT nodes are both clients that
-// connect TO this fixed address. Set EXPO_PUBLIC_API_URL in .env to your domain
-// (which resolves to your static IP). EXPO_PUBLIC_* vars are inlined at build time.
-const FALLBACK = 'http://localhost:3000';
+import { Platform } from 'react-native';
+
+// Gunakan 10.0.2.2 khusus untuk Android Emulator, localhost untuk iOS/Web
+const LOCAL_IP = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+
+const FALLBACK = LOCAL_IP;
 
 // Strip any trailing slash so we can safely concatenate paths.
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? FALLBACK).replace(/\/+$/, '');

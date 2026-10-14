@@ -56,6 +56,7 @@ export interface Sensor {
   location: SensorLocation | null;
   lastUpdated: number;
   fertilizationHistory: FertilizationRecord[];
+  lastReadingId?: number;
 }   
 
 export * from './ILahan';

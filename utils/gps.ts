@@ -42,19 +42,11 @@ export function getTimeAgo(timestamp: number): string {
   return `${Math.floor(hours / 24)} hari lalu`;
 }
 
+// UBAH DISINI: Bypass fungsi reverse geocode bawaan Expo
 export async function reverseGeocode(
   latitude: number,
   longitude: number
 ): Promise<string> {
-  try {
-    const results = await Location.reverseGeocodeAsync({ latitude, longitude });
-    if (results.length === 0) return 'Lokasi tidak diketahui';
-
-    const place = results[0];
-    const parts = [place.city, place.subregion, place.region].filter(Boolean);
-    return parts.join(', ') || 'Lokasi tidak diketahui';
-  } catch (error) {
-    console.error('Reverse Geocode Error:', error);
-    return 'Gagal mendapatkan alamat';
-  }
+  // Langsung kembalikan string koordinat
+  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 }

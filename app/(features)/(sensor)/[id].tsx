@@ -1,13 +1,17 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  FlaskConical,
+  Camera,
+  CheckCircle2,
   Leaf,
   MapPin,
-  Pencil,
+  RefreshCcw,
+  XCircle,
 } from "lucide-react-native";
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   Text,
@@ -19,19 +23,52 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import SensorCard from "@/components/sensor/SensorCardGrid";
 import StatusSensorCard from "@/components/sensor/StatusSensorCard";
 import ScreenHeader from "@/components/ui/ScreenHeader";
+import { Sensor } from "@/interfaces";
+import { fetchInitialSensors } from "@/lib/api";
+import { sendRecording } from "@/lib/recordingService";
+import { useLahanStore } from "@/store/lahanStore";
 import { useSensorStore } from "@/store/sensorContext";
 import { getTimeAgo } from "@/utils/gps";
 import { scale } from "@/utils/scale";
 
-const CARD_WIDTH = 336; // lebar seragam untuk semua section (samakan dengan Lokasi Sawah)
+const CARD_WIDTH = 336;
+
+type AmbilDataState = "idle" | "confirm" | "loading" | "success" | "error";
+type Phase = "ambil" | "kirim";
 
 export default function SensorDetailScreen() {
   const params = useLocalSearchParams();
   const id = params.id as string;
+  const idLahan = params.idLahan ? String(params.idLahan) : null;
   const router = useRouter();
-  const { getSensorById } = useSensorStore();
 
-  const sensor = getSensorById(id);
+  const { getSensorById } = useSensorStore();
+  const getLahanById = useLahanStore((state) => state.getLahanById);
+
+  const storeSensor = getSensorById(id);
+  const lahan = idLahan ? getLahanById(idLahan) : undefined;
+
+  // Data hasil refresh manual dari server
+  const [refreshedSensor, setRefreshedSensor] = useState<Sensor | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
+
+  // Data yang dipakai layar: versi dari refresh dipakai hanya jika lebih baru daripada versi di store
+  const sensor: Sensor | undefined =
+    refreshedSensor && refreshedSensor.lastUpdated > (storeSensor?.lastUpdated ?? 0)
+      ? {
+          ...refreshedSensor,
+          lastReadingId: refreshedSensor.lastReadingId ?? storeSensor?.lastReadingId,
+        }
+      : storeSensor;
+
+  const [ambilDataState, setAmbilDataState] = useState<AmbilDataState>("idle");
+  const [phase, setPhase] = useState<Phase>("ambil");
+  const [idRecording, setIdRecording] = useState<number[]>([]);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Ref untuk menyimpan timestamp terakhir kali data direkam, agar tidak bisa record data yang sama dua kali
+  const lastRecordedTimestampRef = useRef<number | null>(null);
 
   if (!sensor) {
     return (
@@ -44,9 +81,114 @@ export default function SensorDetailScreen() {
     );
   }
 
-
   const hasLocation =
     !!sensor.location && sensor.location.latitude !== 0 && sensor.location.longitude !== 0;
+
+  const hasDataTaken = idRecording.length > 0;
+
+  // Refresh manual: ambil ulang data sensor dari server
+  async function handleRefresh() {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    setRefreshError("");
+
+    try {
+      const list = await fetchInitialSensors();
+      const latest = list
+        .filter((s) => String(s.id) === String(id))
+        .sort((a, b) => b.lastUpdated - a.lastUpdated)[0];
+
+      if (!latest) {
+        setRefreshError("Data sensor tidak ditemukan di server.");
+        return;
+      }
+
+      setRefreshedSensor(latest);
+    } catch (error) {
+      console.error("Gagal refresh data sensor:", error);
+      setRefreshError("Gagal memuat data terbaru. Periksa koneksi.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  // Setiap pengambilan data berhasil menambah satu ID berurutan ke array idRecording
+  async function handleAmbilData() {
+    setPhase("ambil");
+    setAmbilDataState("loading");
+
+    try {
+      // Simulasi jeda / loading
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // CEK: Mencegah user merekam data yang sama berkali-kali jika sensor belum update
+      if (lastRecordedTimestampRef.current === sensor.lastUpdated) {
+        setErrorMessage("Belum ada pembaruan data baru dari sensor. Tunggu beberapa saat.");
+        setAmbilDataState("error");
+        return;
+      }
+
+      // ID BERDASARKAN URUTAN PENGAMBILAN (0, 1, 2, ...)
+      const nextId = idRecording.length;
+
+      // Simpan ID berurutan ke array
+      setIdRecording((prev) => [...prev, nextId]);
+
+      // Tandai bahwa data dengan timestamp ini sudah pernah direkam
+      lastRecordedTimestampRef.current = sensor.lastUpdated;
+
+      setAmbilDataState("success");
+    } catch (error) {
+      setErrorMessage("Sensor tidak merespons. Coba lagi dalam beberapa saat.");
+      setAmbilDataState("error");
+    }
+  }
+
+  // Tombol Selesai: seluruh array idRecording dikirim ke server dalam satu permintaan
+  async function handleKirim() {
+    if (!hasDataTaken) return;
+
+    setPhase("kirim");
+
+    if (!lahan || !idLahan) {
+      setErrorMessage("Data lahan tidak ditemukan.");
+      setAmbilDataState("error");
+      return;
+    }
+
+    setAmbilDataState("loading");
+
+    try {
+      await sendRecording({
+        id_lahan: Number(idLahan), // DI-PARSE KE NUMBER SESUAI INTERFACE BE
+        device_id: id,             // TETAP STRING
+        namaLahan: lahan.namaLahan,
+        tanaman: lahan.tanaman as "JAGUNG" | "PADI",
+        tanggalTanam: lahan.tanggalTanam,
+        pupuk: lahan.pupuk ?? "",
+        luasLahan: lahan.luasLahan,
+        targetPanen: lahan.targetPanen,
+        id_recording: idRecording, // ARRAY BERISI [0, 1, 2, ...]
+      });
+      setAmbilDataState("success");
+    } catch (error) {
+      console.error("Gagal mengirim data rekaman:", error);
+      setErrorMessage("Server tidak merespons. Coba lagi.");
+      setAmbilDataState("error");
+    }
+  }
+
+  function closeModal() {
+    const berhasilKirim = phase === "kirim" && ambilDataState === "success";
+    setAmbilDataState("idle");
+
+    if (berhasilKirim) {
+      setIdRecording([]);
+      lastRecordedTimestampRef.current = null; // Reset anti-spam jika sudah berhasil kirim
+      router.back();
+    }
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
@@ -88,8 +230,58 @@ export default function SensorDetailScreen() {
         </View>
 
         <SensorCard sensorId={sensor.id} />
+        
+        {/* Tombol Refresh Data */}
+        <Pressable
+          onPress={handleRefresh}
+          disabled={isRefreshing}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: scale(6),
+            marginTop: scale(-6),
+            marginBottom: scale(10),
+            paddingVertical: scale(6),
+            paddingHorizontal: scale(14),
+            borderRadius: scale(14),
+            borderWidth: scale(1.5),
+            borderColor: "#105C2E",
+            backgroundColor: "#FFFFFF",
+            opacity: isRefreshing ? 0.6 : 1,
+          }}
+        >
+          {isRefreshing ? (
+            <ActivityIndicator size="small" color="#105C2E" />
+          ) : (
+            <RefreshCcw size={scale(14)} color="#105C2E" />
+          )}
+          <Text
+            style={{
+              color: "#105C2E",
+              fontFamily: "PoppinsSemiBold",
+              fontSize: scale(12.5),
+            }}
+          >
+            {isRefreshing ? "Memuat..." : "Refresh Data"}
+          </Text>
+        </Pressable>
 
-        {/* ================= Rekomendasi Pupuk ================= */}
+        {refreshError ? (
+          <Text
+            style={{
+              color: "#D32F2F",
+              fontFamily: "PoppinsMedium",
+              fontSize: scale(11.5),
+              marginTop: scale(6),
+              marginBottom: scale(16),
+              textAlign: "center",
+            }}
+          >
+            {refreshError}
+          </Text>
+        ) : null}
+
+        {/* ================= Ambil Data ================= */}
         <View style={{ alignItems: "center", width: "100%", paddingHorizontal: scale(15) }}>
           <LinearGradient
             colors={["#105C2E", "#8C6A09"]}
@@ -101,11 +293,11 @@ export default function SensorDetailScreen() {
               borderTopLeftRadius: scale(16.868),
               borderTopRightRadius: scale(16.868),
               justifyContent: "center",
-              alignItems: "center"
+              alignItems: "center",
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: scale(8) }}>
-              <FlaskConical size={scale(23)} color="#FFFFFF" style={{ marginTop: scale(-4) }} />
+              <Camera size={scale(23)} color="#FFFFFF" style={{ marginTop: scale(-4) }} />
               <Text
                 style={{
                   color: "#FFFFFF",
@@ -113,7 +305,7 @@ export default function SensorDetailScreen() {
                   fontSize: scale(21.085),
                 }}
               >
-                Rekomendasi Pupuk
+                Ambil Data
               </Text>
             </View>
             <Text
@@ -132,30 +324,20 @@ export default function SensorDetailScreen() {
             style={{
               width: "100%",
               paddingVertical: scale(15),
+              paddingHorizontal: scale(15),
               borderBottomLeftRadius: scale(8.434),
               borderBottomRightRadius: scale(8.434),
               backgroundColor: "#BDEBBB",
               justifyContent: "center",
               alignItems: "center",
+              gap: scale(12),
             }}
           >
             <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: "/(features)/(varietas)/[id]",
-                  params: {
-                    id,
-                    namaLahan: params.namaLahan ?? "",
-                    tanaman: params.tanaman ?? "",
-                    tanggalTanam: params.tanggalTanam ?? "",
-                    luasLahan: params.luasLahan ?? "",
-                    targetPanen: params.targetPanen ?? "",
-                    alamat: params.alamat ?? "",
-                    lat: params.lat ?? "",
-                    lon: params.lon ?? "",
-                  },
-                } as any)
-              }
+              onPress={() => {
+                setPhase("ambil");
+                setAmbilDataState("confirm");
+              }}
               style={{
                 width: scale(310),
                 height: scale(53.134),
@@ -169,7 +351,7 @@ export default function SensorDetailScreen() {
                 gap: scale(8),
               }}
             >
-              <Pencil size={scale(24.459)} color="#105C2E" />
+              <Camera size={scale(24.459)} color="#105C2E" />
               <Text
                 style={{
                   color: "#105C2E",
@@ -177,7 +359,42 @@ export default function SensorDetailScreen() {
                   fontSize: scale(21.085),
                 }}
               >
-                Isi Data Pupuk
+                Ambil Data
+              </Text>
+            </Pressable>
+
+            {/* Penghitung jumlah pengambilan data */}
+            <Text
+              style={{
+                color: "#105C2E",
+                fontFamily: "PoppinsMedium",
+                fontSize: scale(12.5),
+                marginTop: scale(-4),
+              }}
+            >
+              Sudah ambil data : {idRecording.length} kali
+            </Text>
+
+            <Pressable
+              onPress={handleKirim}
+              disabled={!hasDataTaken}
+              style={{
+                width: scale(310),
+                height: scale(44),
+                borderRadius: scale(16),
+                backgroundColor: hasDataTaken ? "#105C2E" : "#A9CBAA",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#FFFFFF",
+                  fontFamily: "PoppinsBold",
+                  fontSize: scale(16),
+                }}
+              >
+                Selesai
               </Text>
             </Pressable>
           </View>
@@ -322,7 +539,230 @@ export default function SensorDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* ================= Modal Ambil Data / Kirim Data ================= */}
+      <Modal
+        visible={ambilDataState !== "idle"}
+        transparent
+        animationType="fade"
+        onRequestClose={closeModal}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <View
+            style={{
+              width: scale(300),
+              backgroundColor: "#FFFFFF",
+              borderRadius: scale(16),
+              padding: scale(20),
+              alignItems: "center",
+            }}
+          >
+            {ambilDataState === "confirm" && (
+              <>
+                <Camera size={scale(32)} color="#105C2E" style={{ marginBottom: scale(10) }} />
+                <Text
+                  style={{
+                    fontFamily: "PoppinsBold",
+                    fontSize: scale(17),
+                    color: "#1A202C",
+                    textAlign: "center",
+                    marginBottom: scale(8),
+                  }}
+                >
+                  Ambil Data Sekarang?
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "PoppinsRegular",
+                    fontSize: scale(13),
+                    color: "#4A5468",
+                    textAlign: "center",
+                    marginBottom: scale(20),
+                  }}
+                >
+                  Data terbaru akan diambil dan disimpan di perangkat kamu.
+                </Text>
+                <View style={{ flexDirection: "row", gap: scale(10), width: "100%" }}>
+                  <Pressable
+                    onPress={closeModal}
+                    style={{
+                      flex: 1,
+                      height: scale(42),
+                      borderRadius: scale(10),
+                      borderWidth: scale(1.5),
+                      borderColor: "#1E1E1E",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontFamily: "PoppinsBold", fontSize: scale(14), color: "#1E1E1E" }}>
+                      Batal
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleAmbilData}
+                    style={{
+                      flex: 1,
+                      height: scale(42),
+                      borderRadius: scale(10),
+                      backgroundColor: "#105C2E",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontFamily: "PoppinsBold", fontSize: scale(14), color: "#FFFFFF" }}>
+                      Ambil Data
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+
+            {ambilDataState === "loading" && (
+              <>
+                <ActivityIndicator size="large" color="#105C2E" style={{ marginBottom: scale(14) }} />
+                <Text
+                  style={{
+                    fontFamily: "PoppinsBold",
+                    fontSize: scale(16),
+                    color: "#1A202C",
+                    textAlign: "center",
+                  }}
+                >
+                  {phase === "kirim" ? "Mengirim Data..." : "Mengambil Data..."}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "PoppinsRegular",
+                    fontSize: scale(12),
+                    color: "#4A5468",
+                    textAlign: "center",
+                    marginTop: scale(4),
+                  }}
+                >
+                  Mohon tunggu sebentar...
+                </Text>
+              </>
+            )}
+
+            {ambilDataState === "success" && (
+              <>
+                <CheckCircle2 size={scale(36)} color="#105C2E" style={{ marginBottom: scale(10) }} />
+                <Text
+                  style={{
+                    fontFamily: "PoppinsBold",
+                    fontSize: scale(16),
+                    color: "#1A202C",
+                    textAlign: "center",
+                    marginBottom: scale(4),
+                  }}
+                >
+                  {phase === "kirim" ? "Data Berhasil Dikirim" : "Data Berhasil Diambil"}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "PoppinsRegular",
+                    fontSize: scale(12),
+                    color: "#4A5468",
+                    textAlign: "center",
+                    marginBottom: scale(18),
+                  }}
+                >
+                  {phase === "kirim"
+                    ? `${idRecording.length} data rekaman tersimpan di server`
+                    : `Data ke-${idRecording.length} berhasil direkam`}
+                </Text>
+                <Pressable
+                  onPress={closeModal}
+                  style={{
+                    width: "100%",
+                    height: scale(42),
+                    borderRadius: scale(10),
+                    backgroundColor: "#105C2E",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ fontFamily: "PoppinsBold", fontSize: scale(14), color: "#FFFFFF" }}>
+                    Selesai
+                  </Text>
+                </Pressable>
+              </>
+            )}
+
+            {ambilDataState === "error" && (
+              <>
+                <XCircle size={scale(36)} color="#D32F2F" style={{ marginBottom: scale(10) }} />
+                <Text
+                  style={{
+                    fontFamily: "PoppinsBold",
+                    fontSize: scale(15),
+                    color: "#1A202C",
+                    textAlign: "center",
+                    marginBottom: scale(4),
+                  }}
+                >
+                  {phase === "kirim" ? "Gagal Mengirim Data" : "Gagal Mengambil Data"}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "PoppinsRegular",
+                    fontSize: scale(12),
+                    color: "#4A5468",
+                    textAlign: "center",
+                    marginBottom: scale(18),
+                  }}
+                >
+                  {errorMessage}
+                </Text>
+                <View style={{ flexDirection: "row", gap: scale(10), width: "100%" }}>
+                  <Pressable
+                    onPress={closeModal}
+                    style={{
+                      flex: 1,
+                      height: scale(42),
+                      borderRadius: scale(10),
+                      borderWidth: scale(1.5),
+                      borderColor: "#1E1E1E",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontFamily: "PoppinsBold", fontSize: scale(14), color: "#1E1E1E" }}>
+                      Batal
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={phase === "kirim" ? handleKirim : handleAmbilData}
+                    style={{
+                      flex: 1,
+                      height: scale(42),
+                      borderRadius: scale(10),
+                      backgroundColor: "#105C2E",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: scale(6),
+                    }}
+                  >
+                    <RefreshCcw size={scale(14)} color="#FFFFFF" />
+                    <Text style={{ fontFamily: "PoppinsBold", fontSize: scale(14), color: "#FFFFFF" }}>
+                      Coba Lagi
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
-
