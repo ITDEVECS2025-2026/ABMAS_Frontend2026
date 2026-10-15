@@ -146,38 +146,46 @@ export default function SensorDetailScreen() {
   }
 
   // Tombol Selesai: seluruh array idRecording dikirim ke server dalam satu permintaan
-  async function handleKirim() {
-    if (!hasDataTaken) return;
+  // Tombol Selesai: seluruh array idRecording dikirim ke server dalam satu permintaan
+async function handleKirim() {
+  if (!hasDataTaken) return;
 
-    setPhase("kirim");
+  setPhase("kirim");
 
-    if (!lahan || !idLahan) {
-      setErrorMessage("Data lahan tidak ditemukan.");
-      setAmbilDataState("error");
-      return;
-    }
-
-    setAmbilDataState("loading");
-
-    try {
-      await sendRecording({
-        id_lahan: Number(idLahan), // DI-PARSE KE NUMBER SESUAI INTERFACE BE
-        device_id: id,             // TETAP STRING
-        namaLahan: lahan.namaLahan,
-        tanaman: lahan.tanaman as "JAGUNG" | "PADI",
-        tanggalTanam: lahan.tanggalTanam,
-        pupuk: lahan.pupuk ?? "",
-        luasLahan: lahan.luasLahan,
-        targetPanen: lahan.targetPanen,
-        id_recording: idRecording, // ARRAY BERISI [0, 1, 2, ...]
-      });
-      setAmbilDataState("success");
-    } catch (error) {
-      console.error("Gagal mengirim data rekaman:", error);
-      setErrorMessage("Server tidak merespons. Coba lagi.");
-      setAmbilDataState("error");
-    }
+  if (!lahan || !idLahan) {
+    setErrorMessage("Data lahan tidak ditemukan.");
+    setAmbilDataState("error");
+    return;
   }
+
+  const idLahanAngka = Number(idLahan);
+  if (!Number.isInteger(idLahanAngka)) {
+    setErrorMessage("ID lahan tidak valid. Buat ulang data lahan.");
+    setAmbilDataState("error");
+    return;
+  }
+
+  setAmbilDataState("loading");
+
+  try {
+    await sendRecording({
+      id_lahan: idLahanAngka,
+      device_id: id,
+      namaLahan: lahan.namaLahan,
+      tanaman: lahan.tanaman,
+      tanggalTanam: lahan.tanggalTanam,
+      pupuk: lahan.pupuk ?? "",
+      luasLahan: lahan.luasLahan,
+      targetPanen: lahan.targetPanen,
+      id_recording: idRecording,
+    });
+    setAmbilDataState("success");
+  } catch (error) {
+    console.error("Gagal mengirim data rekaman:", error);
+    setErrorMessage("Server tidak merespons. Coba lagi.");
+    setAmbilDataState("error");
+  }
+}
 
   function closeModal() {
     const berhasilKirim = phase === "kirim" && ambilDataState === "success";
