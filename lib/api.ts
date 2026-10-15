@@ -61,17 +61,10 @@ export async function fetchInitialSensors(): Promise<Sensor[]> {
 }
 
 export interface HarvestPayload {
-  namaLahan: string;
-  tanaman: string;
-  tanggalTanam: string;
-  luasLahan: number;
-  targetPanen: number;
+  id_lahan: number;
   hasilPanenAktual: number;
-  rentangSensor: {
-    sensorIdAwal: string;
-    sensorIdAkhir: string;
   };
-}
+
 
 export async function saveHarvestData(payload: HarvestPayload) {
   const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
