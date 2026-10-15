@@ -10,7 +10,7 @@ export interface RecordingPayload {
   luasLahan: number;
   targetPanen: number;
   id_recording: number[];
-} 
+}
 
 function getHeaders() {
   const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
@@ -21,6 +21,8 @@ function getHeaders() {
 }
 
 export async function sendRecording(payload: RecordingPayload) {
+  console.log("PAYLOAD /record:", JSON.stringify(payload));
+
   const response = await fetch(`${API_URL}/record`, {
     method: "POST",
     headers: getHeaders(),
@@ -28,8 +30,12 @@ export async function sendRecording(payload: RecordingPayload) {
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+    const errorBody = await response.text();
+    console.error("DETAIL ERROR DARI SERVER:", errorBody);
+    throw new Error(`HTTP Error ${response.status}: ${errorBody}`);
   }
 
-  return response.json();
+  // Aman jika server membalas tanpa isi (misalnya 201 atau 204)
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
