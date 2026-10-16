@@ -369,25 +369,40 @@ export function runRuleEngine(input: RuleEngineInput): RuleEngineOutput {
   const totalNPKLahan  = r(totalNPKHa  * luas);
   const totalUreaLahan = r(totalUreaHa * luas);
 
-  // ── JAGUNG TUNGGAL
-  if (varietas === "jagung" && jenisPupuk === "tunggal") {
-    return {
-      warnings,
-      targetPanen: { nilai: targetPanen, produktivitas, ureaPerHa },
-      dosisPerHa,
-      totalLahan: { npk: totalNPKLahan, urea: totalUreaLahan, sp36: 0, kcl: 0 },
-      jadwal: jadwalJagungTunggal(totalNPKLahan, totalUreaLahan),
-    };
-  }
+ // ── JADWAL: JAGUNG MAJEMUK ────────────────────────────────────
 
-  // ── JAGUNG MAJEMUK
-  return {
-    warnings,
-    targetPanen: { nilai: targetPanen, produktivitas, ureaPerHa },
-    dosisPerHa,
-    totalLahan: { npk: totalNPKLahan, urea: totalUreaLahan, sp36: 0, kcl: 0 },
-    jadwal: jadwalJagungMajemuk(totalNPKLahan, totalUreaLahan),
-  };
+function jadwalJagungMajemuk(totalNPK: number, totalUrea: number): JadwalFaseMajemukJagung[] {
+  const fases = [
+    { fase: "15 HST", pctNPK: 0.50, pctUrea: 0.33 },
+    { fase: "35 HST", pctNPK: 0.50, pctUrea: 0.33 },
+    { fase: "45-50 HST", pctNPK: 0.00, pctUrea: 0.34 },
+  ];
+  return fases.map((f) => ({
+    fase: f.fase,
+    npk:  r(totalNPK  * f.pctNPK),
+    urea: r(totalUrea * f.pctUrea),
+  }));
+}
+
+// ── JADWAL: JAGUNG TUNGGAL ────────────────────────────────────
+
+function jadwalJagungTunggal(totalNPK: number, totalUrea: number): JadwalFaseTunggal[] {
+  const fases = [
+    { fase: "15 HST", pctNPK: 0.50, pctUrea: 0.33 },
+    { fase: "35 HST", pctNPK: 0.50, pctUrea: 0.33 },
+    { fase: "45-50 HST", pctNPK: 0.00, pctUrea: 0.34 },
+  ];
+  return fases.map((f) => {
+    const npkFase  = totalNPK  * f.pctNPK;
+    const ureaFase = totalUrea * f.pctUrea;
+    return {
+      fase: f.fase,
+      urea: r(ureaFase + (npkFase * 0.15) / 0.46),
+      sp36: r((npkFase * 0.15) / 0.36),
+      kcl:  r((npkFase * 0.15) / 0.60),
+    };
+  });
+}
 }
 
 // ── HELPER: gabung sensor + form petani → RuleEngineInput ────
