@@ -18,7 +18,7 @@ import {
 import MapView, { Marker } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AddLahanCard from "@/components/form/AddlahanCard";
-import { ChartNoAxesCombined, CloudMoonRain, ThermometerSun, Droplets } from "lucide-react-native";
+import { ChartNoAxesCombined, CloudMoonRain, ThermometerSun, Droplets, AlignCenter } from "lucide-react-native";
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -120,7 +120,7 @@ export default function DashboardScreen() {
 
         <AddLahanCard value={namaLahan} onChangeText={setNamaLahan} onAdd={handleTambah} />
 
-        <TouchableOpacity onPress={() => router.push("/(features)/(monitoring)")} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => router.push("/(main)/(monitoring)")} activeOpacity={0.8}>
           <LinearGradient
             colors={["#105C2E", "#8C6A09"]}
             start={{ x: 0, y: 0 }}
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   buttonIconLeft: { position: "absolute", left: 16 },
-  buttonText: { color: "#FFF", fontWeight: "bold", fontSize: 18 },
+  buttonText: { color: "#FFF", fontWeight: "bold", fontSize: 18, alignItems: "center", justifyContent: "center", paddingLeft: 40},
   buttonTextPrakiraan: { color: "#FFF", fontWeight: "bold", fontSize: 18 },
   lokasi: {
     width: "100%",

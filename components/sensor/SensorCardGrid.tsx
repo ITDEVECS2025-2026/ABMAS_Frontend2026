@@ -1,45 +1,26 @@
 import React from "react";
 import { Text, View } from "react-native";
 import { useSensorStore } from "@/store/sensorContext";
+import { Sensor } from "@/interfaces";
 import MetricCard from "./SensorMetricCard";
 
 interface SensorCardProps {
   sensorId: string;
+  sensorData?: Sensor;
 }
 
 export default function SensorCard({
   sensorId,
+  sensorData,
 }: SensorCardProps) {
+  const { sensors, connected } = useSensorStore();
 
-  /*
-  ========================================
-  AMBIL DATA SENSOR DARI STORE
-  ========================================
-  */
+  // Prioritaskan data hasil refresh dari halaman detail
+  const sensor =
+    sensorData ??
+    sensors.find((item) => String(item.id) === String(sensorId));
 
-  const {
-    sensors,
-    connected,
-  } = useSensorStore();
-
-
-  /*
-  ========================================
-  CARI SENSOR BERDASARKAN ID
-  ========================================
-  */
-
-  const sensor = sensors.find(
-    (item) => String(item.id) === String(sensorId)
-  );
-
-
-  /*
-  ========================================
-  JIKA SENSOR BELUM DITEMUKAN
-  ========================================
-  */
-
+  // Jika sensor belum ditemukan
   if (!sensor) {
     return (
       <View
@@ -53,10 +34,7 @@ export default function SensorCard({
           justifyContent: "center",
           elevation: 3,
           shadowColor: "#000000",
-          shadowOffset: {
-            width: 0,
-            height: 2,
-          },
+          shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.12,
           shadowRadius: 4,
         }}
@@ -76,17 +54,7 @@ export default function SensorCard({
     );
   }
 
-
-  /*
-  ========================================
-  DATA SENSOR DARI SERVER
-  ========================================
-  */
-
-  const {
-    soilData,
-  } = sensor;
-
+  const { soilData } = sensor;
 
   return (
     <View
@@ -98,7 +66,7 @@ export default function SensorCard({
         marginBottom: 16,
       }}
     >
-      {/* ROW 1 */}
+      {/* ROW 1: N, P, K */}
       <View
         style={{
           flexDirection: "row",
@@ -107,27 +75,12 @@ export default function SensorCard({
           width: "100%",
         }}
       >
-
-        <MetricCard
-          type="N"
-          value={soilData.N}
-        />
-
-        <MetricCard
-          type="P"
-          value={soilData.P}
-        />
-
-        <MetricCard
-          type="K"
-          value={soilData.K}
-        />
-
+        <MetricCard type="N" value={soilData.N} />
+        <MetricCard type="P" value={soilData.P} />
+        <MetricCard type="K" value={soilData.K} />
       </View>
 
-      {/* ROW 2 */}
-      {/* EC - pH */}
-
+      {/* ROW 2: EC, pH */}
       <View
         style={{
           flexDirection: "row",
@@ -136,21 +89,11 @@ export default function SensorCard({
           width: "100%",
         }}
       >
-
-        <MetricCard
-          type="EC"
-          value={soilData.EC}
-        />
-
-        <MetricCard
-          type="pH"
-          value={soilData.pH}
-        />
-
+        <MetricCard type="EC" value={soilData.EC} />
+        <MetricCard type="pH" value={soilData.pH} />
       </View>
 
-      {/* ROW 3 */}
-
+      {/* ROW 3: Suhu, Kelembapan */}
       <View
         style={{
           flexDirection: "row",
@@ -159,19 +102,15 @@ export default function SensorCard({
           width: "100%",
         }}
       >
-
         <MetricCard
           type="Suhu"
           value={soilData.temperature}
         />
-
         <MetricCard
           type="Kelembaban"
           value={soilData.humidity}
         />
-
       </View>
-
     </View>
   );
 }
