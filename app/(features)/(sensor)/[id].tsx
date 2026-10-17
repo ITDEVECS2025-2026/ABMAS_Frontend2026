@@ -1,3 +1,4 @@
+//(feature)/(sensor)/[id].tsx
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -30,6 +31,10 @@ import { useLahanStore } from "@/store/lahanStore";
 import { useSensorStore } from "@/store/sensorContext";
 import { getTimeAgo } from "@/utils/gps";
 import { scale } from "@/utils/scale";
+import { averageSensorReadings } from '@/utils/averageReadings'; //sensor averager utility
+
+// GANTI PATH INI SESUAI LOKASI FILE ZUSTAND ANDA:
+import { useRecordingStore, type RecordedSnapshot } from "@/store/recordingStore"; 
 
 const CARD_WIDTH = 336;
 
@@ -48,12 +53,10 @@ export default function SensorDetailScreen() {
   const storeSensor = getSensorById(id);
   const lahan = idLahan ? getLahanById(idLahan) : undefined;
 
-  // Data hasil refresh manual dari server
   const [refreshedSensor, setRefreshedSensor] = useState<Sensor | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState("");
 
-  // Data yang dipakai layar: versi dari refresh dipakai hanya jika lebih baru daripada versi di store
   const sensor: Sensor | undefined =
     refreshedSensor && refreshedSensor.lastUpdated > (storeSensor?.lastUpdated ?? 0)
       ? {
@@ -67,8 +70,10 @@ export default function SensorDetailScreen() {
   const [idRecording, setIdRecording] = useState<number[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Ref untuk menyimpan timestamp terakhir kali data direkam, agar tidak bisa record data yang sama dua kali
+  // PENGGUNAAN REF AGAR DATA TERSIMPAN SECARA SINKRON DAN ANTI-GAGAL
   const lastRecordedTimestampRef = useRef<number | null>(null);
+  const snapshotsRef = useRef<RecordedSnapshot[]>([]);
+  const savedLocalIdRef = useRef<string | null>(null);
 
   if (!sensor) {
     return (
@@ -86,10 +91,8 @@ export default function SensorDetailScreen() {
 
   const hasDataTaken = idRecording.length > 0;
 
-  // Refresh manual: ambil ulang data sensor dari server
   async function handleRefresh() {
     if (isRefreshing) return;
-
     setIsRefreshing(true);
     setRefreshError("");
 
@@ -103,7 +106,6 @@ export default function SensorDetailScreen() {
         setRefreshError("Data sensor tidak ditemukan di server.");
         return;
       }
-
       setRefreshedSensor(latest);
     } catch (error) {
       console.error("Gagal refresh data sensor:", error);
@@ -113,42 +115,39 @@ export default function SensorDetailScreen() {
     }
   }
 
-  // Setiap pengambilan data berhasil menambah satu ID berurutan ke array idRecording
   async function handleAmbilData() {
     setPhase("ambil");
     setAmbilDataState("loading");
 
     try {
-      // Simulasi jeda / loading
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // CEK: Mencegah user merekam data yang sama berkali-kali jika sensor belum update
       if (lastRecordedTimestampRef.current === sensor.lastUpdated) {
         setErrorMessage("Belum ada pembaruan data baru dari sensor. Tunggu beberapa saat.");
         setAmbilDataState("error");
         return;
       }
 
-      // ID BERDASARKAN URUTAN PENGAMBILAN (0, 1, 2, ...)
       const nextId = idRecording.length;
-
-      // Simpan ID berurutan ke array
       setIdRecording((prev) => [...prev, nextId]);
-
-      // Tandai bahwa data dengan timestamp ini sudah pernah direkam
+      
+      // Simpan snapshot pembacaan sensor ke ref untuk dihitung rata-ratanya nanti
+      if ((sensor as any).soilData) {
+        snapshotsRef.current.push((sensor as any).soilData);
+      }
+      
       lastRecordedTimestampRef.current = sensor.lastUpdated;
-
       setAmbilDataState("success");
     } catch (error) {
-      setErrorMessage("Sensor tidak merespons. Coba lagi dalam beberapa saat.");
+      console.error("Gagal mengambil data:", error);
+      setErrorMessage("Terjadi kesalahan saat mengambil data sensor.");
       setAmbilDataState("error");
     }
   }
+    
 
-  // Tombol Selesai: seluruh array idRecording dikirim ke server dalam satu permintaan
-  async function handleKirim() {
+async function handleKirim() {
     if (!hasDataTaken) return;
-
     setPhase("kirim");
 
     if (!lahan || !idLahan) {
@@ -157,24 +156,53 @@ export default function SensorDetailScreen() {
       return;
     }
 
+    const idLahanAngka = Number(idLahan);
+    if (!Number.isInteger(idLahanAngka)) {
+      setErrorMessage("ID lahan tidak valid. Buat ulang data lahan.");
+      setAmbilDataState("error");
+      return;
+    }
+
     setAmbilDataState("loading");
 
     try {
-      await sendRecording({
-        id_lahan: Number(idLahan), // DI-PARSE KE NUMBER SESUAI INTERFACE BE
-        device_id: id,             // TETAP STRING
+      // 1. Calculate the average of all collected sensor snapshots
+      const averageReadings = averageSensorReadings(snapshotsRef.current);
+      console.log("📊 Rata-rata pembacaan sensor:", averageReadings);
+
+      // 2. Build the payload khusus untuk API Server (TIDAK ADA averageSensor)
+      const apiPayload = {
+        id_lahan: idLahanAngka,
+        device_id: id,
         namaLahan: lahan.namaLahan,
-        tanaman: lahan.tanaman as "JAGUNG" | "PADI",
+        tanaman: lahan.tanaman,
         tanggalTanam: lahan.tanggalTanam,
         pupuk: lahan.pupuk ?? "",
         luasLahan: lahan.luasLahan,
         targetPanen: lahan.targetPanen,
-        id_recording: idRecording, // ARRAY BERISI [0, 1, 2, ...]
-      });
+        id_recording: idRecording,
+      };
+
+      // 3. Build payload lokal untuk Zustand (ADA averageSensor untuk halaman rekomendasi)
+      const localPayload = {
+        ...apiPayload,
+        averageSensor: averageReadings,
+      };
+
+      // 4. Send to Server HANYA menggunakan apiPayload
+      await sendRecording(apiPayload);
+
+      // 5. Save to local storage via Zustand store MENGGUNAKAN localPayload
+      const localId = useRecordingStore.getState().addRecording(localPayload, snapshotsRef.current);
+      
+      // 6. Store localId in ref for subsequent navigation
+      savedLocalIdRef.current = localId;
+      console.log("✅ Berhasil simpan ke Zustand & API. LocalId:", localId);
+
       setAmbilDataState("success");
     } catch (error) {
       console.error("Gagal mengirim data rekaman:", error);
-      setErrorMessage("Server tidak merespons. Coba lagi.");
+      setErrorMessage("Gagal mengirim data ke server. Coba lagi.");
       setAmbilDataState("error");
     }
   }
@@ -183,10 +211,20 @@ export default function SensorDetailScreen() {
     const berhasilKirim = phase === "kirim" && ambilDataState === "success";
     setAmbilDataState("idle");
 
-    if (berhasilKirim) {
+    if (berhasilKirim && savedLocalIdRef.current) {
+      const finalLocalId = savedLocalIdRef.current;
+      
+      // Reset semua reference agar bersih saat user membuka menu ini lagi kedepannya
+      savedLocalIdRef.current = null;
+      snapshotsRef.current = [];
       setIdRecording([]);
-      lastRecordedTimestampRef.current = null; // Reset anti-spam jika sudah berhasil kirim
-      router.back();
+      lastRecordedTimestampRef.current = null; 
+
+      // Navigasi
+      router.replace({
+        pathname: "/(features)/(rekomendasi)",
+        params: { localId: finalLocalId }
+      });
     }
   }
 
@@ -363,7 +401,6 @@ export default function SensorDetailScreen() {
               </Text>
             </Pressable>
 
-            {/* Penghitung jumlah pengambilan data */}
             <Text
               style={{
                 color: "#105C2E",

@@ -1,132 +1,446 @@
-import React, { useState } from "react";
-import { SafeAreaView, View, TextInput, StyleSheet, Text, StatusBar, TouchableOpacity, ScrollView, Image } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+// app/(features)/(history)/index.tsx — halaman History Pemupukan
 import { LinearGradient } from "expo-linear-gradient";
-import { useLahanStore } from "../../store/lahanStore";
 import { useRouter } from "expo-router";
+import { ArrowLeft, PlusCircle, Search, SquarePen } from "lucide-react-native";
+import React, { useMemo, useState } from "react";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import AddLahanCard from "@/components/form/AddlahanCard";
+import { useHistoryStore } from "@/store/historystore";
+import { useLahanStore } from "@/store/lahanStore";
+import { scale } from "@/utils/scale";
+import ScreenHeader from "@/components/ui/ScreenHeader";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-// ✅ IMPORT KOMPONEN BUATAN KATINGMU
-import AddLahanCard from "../../components/form/AddlahanCard";
+const jagungIcon = require("../../styles/assets/jagung icon.png");
+const padiIcon = require("../../styles/assets/padi icon.png");
 
-// Fungsi penerjemah tanggal
-const formatTanggal = (dateString: string) => {
-  if (!dateString) return "-";
+const DETAIL_PATH = "/(features)/(history)/[idLahan]";
+const FORM_LAHAN_PATH = "/(features)/(lahan)";
+const GRADIENT = ["#105C2E", "#8C6A09"] as const;
 
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return dateString;
-
-  const namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-
-  return `${date.getDate()} ${namaBulan[date.getMonth()]} ${date.getFullYear()}`;
+type LahanItem = {
+  id?: string | number;
+  idLahan?: string | number;
+  namaLahan?: string;
+  nama_lahan?: string;
+  nama?: string;
+  tanaman?: string;
+  jenisTanaman?: string;
+  jenis_tanaman?: string;
+  tanggalTanam?: string;
+  tanggal_tanam?: string;
+  [key: string]: unknown;
 };
 
-export default function HistoryPage() {
+function getNamaLahan(lahan: LahanItem): string {
+  const nama =
+    lahan.namaLahan ??
+    lahan.nama_lahan ??
+    lahan.nama ??
+    "";
+  return String(nama).trim();
+}
+
+function getIdLahan(lahan: LahanItem): string {
+  const id = lahan.idLahan ?? lahan.id;
+  return id == null ? "" : String(id);
+}
+
+function getTanggalTanam(lahan: LahanItem): string | undefined {
+  const tanggal = lahan.tanggalTanam ?? lahan.tanggal_tanam;
+  return typeof tanggal === "string" ? tanggal : undefined;
+}
+
+function isTanamanJagung(lahan: LahanItem): boolean {
+  const tanaman = String(
+    lahan.tanaman ?? lahan.jenisTanaman ?? lahan.jenis_tanaman ?? ""
+  ).toUpperCase();
+  return tanaman.includes("JAGUNG");
+}
+
+export default function HistoryPemupukanPage() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
 
-  // State untuk nama lahan baru
-  const [newLahanInput, setNewLahanInput] = useState("");
+  // Mendukung beberapa nama properti yang mungkin dipakai lahanStore.
+  const lahanList = useLahanStore(
+    (s: any) => s.lahanList ?? s.lahan ?? s.listLahan ?? s.dataLahan ?? []
+  ) as LahanItem[];
 
-  const { lahanList } = useLahanStore();
+  const entries = useHistoryStore((s) => s.entries);
 
-  // Fungsi Klik Kartu: Pindah ke Monitoring & bawa ID lahan
-  const handleCardPress = (id: string) => {
-    router.push({
-      pathname: "/(features)/(history)",
-      params: { idLahan: id },
+  const [query, setQuery] = useState("");
+  const [namaBaru, setNamaBaru] = useState("");
+  const [showModal, setShowModal] = useState(false);
+
+  const filtered = useMemo(() => {
+    const daftar = Array.isArray(lahanList) ? lahanList : [];
+    const kataKunci = query.trim().toLocaleLowerCase("id-ID");
+
+    if (!kataKunci) return daftar;
+
+    return daftar.filter((lahan) =>
+      getNamaLahan(lahan).toLocaleLowerCase("id-ID").includes(kataKunci)
+    );
+  }, [lahanList, query]);
+
+  const formatTanggal = (iso?: string) => {
+    if (!iso) return "-";
+    const tanggal = new Date(iso);
+    if (Number.isNaN(tanggal.getTime())) return "-";
+    return tanggal.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   };
 
-  // Filter daftar lahan berdasarkan search bar
-  const filteredLahan = lahanList.filter((item) => item.namaLahan.toLowerCase().includes(searchQuery.toLowerCase()));
+  const handleTambah = () => {
+    const nama = namaBaru.trim();
+    if (!nama) return;
+
+    setShowModal(false);
+    setNamaBaru("");
+    router.push({
+      pathname: FORM_LAHAN_PATH,
+      params: { namaLahan: nama },
+    } as any);
+  };
 
   return (
-    <View style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      <ScreenHeader title="History Pemupukan" />
 
-      {/* HEADER GRADASI */}
-      <LinearGradient colors={["#1b5e20", "#4d6b13", "#767614"]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.headerContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>History Pemupukan</Text>
-      </LinearGradient>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* SEARCH BAR */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#64748B" style={styles.searchIcon} />
-          <TextInput style={[styles.searchInput, searchQuery.length === 0 ? styles.italicText : styles.normalText]} placeholder="Cari Nama Lahan.." placeholderTextColor="#64748B" value={searchQuery} onChangeText={setSearchQuery} />
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingHorizontal: scale(30),
+          paddingTop: scale(16),
+          paddingBottom: scale(24),
+          flexGrow: 1,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Search bar */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: "#EEF2F1",
+            borderRadius: scale(20),
+            borderWidth: 1,
+            borderColor: "#CBD5E1",
+            paddingHorizontal: scale(10),
+            minHeight: scale(44),
+            marginBottom: scale(14),
+          }}
+        >
+          <Search size={scale(17)} color="#64748B" />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Cari nama lahan..."
+            placeholderTextColor="#64748B"
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+            underlineColorAndroid="transparent"
+            selectionColor="#105C2E"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: scale(42),
+              marginLeft: scale(8),
+              paddingHorizontal: 0,
+              paddingVertical: 0,
+              includeFontPadding: false,
+              textAlignVertical: "center",
+              fontFamily: "PoppinsRegular",
+              fontSize: scale(12),
+              color: "#1A202C",
+            }}
+          />
+          {query.length > 0 && (
+            <Pressable
+              onPress={() => setQuery("")}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Hapus pencarian"
+              style={{ paddingLeft: scale(8), paddingVertical: scale(4) }}
+            >
+              <Text
+                style={{
+                  color: "#64748B",
+                  fontFamily: "PoppinsMedium",
+                  fontSize: scale(12),
+                }}
+              >
+                ×
+              </Text>
+            </Pressable>
+          )}
         </View>
 
-        {/* LIST KARTU LAHAN */}
-        <View style={styles.listContainer}>
-          {filteredLahan.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.card} activeOpacity={0.7} onPress={() => handleCardPress(item.id)}>
-              <View style={styles.iconContainer}>
-                <Image source={item.tanaman === "JAGUNG" ? require("../../styles/assets/jagung icon.png") : require("../../styles/assets/padi icon.png")} style={styles.iconImage} />
-              </View>
+        {/* List lahan */}
+        <View style={{ gap: scale(10), marginBottom: scale(20) }}>
+          {filtered.length === 0 && (
+            <Text
+              style={{
+                textAlign: "center",
+                color: "#64748B",
+                fontFamily: "PoppinsRegular",
+                fontSize: scale(12),
+                marginVertical: scale(16),
+              }}
+            >
+              {query.trim()
+                ? `Lahan dengan nama "${query.trim()}" tidak ditemukan.`
+                : "Belum ada lahan. Tambahkan lahan pertamamu di bawah."}
+            </Text>
+          )}
 
-              <View style={styles.cardContent}>
-                <Text style={styles.lahanName}>{item.namaLahan}</Text>
-                <LinearGradient colors={["#166534", "#4d6b13", "#767614"]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.cropBadge}>
-                  <Text style={styles.cropText}>{item.tanaman === "JAGUNG" ? "Tanaman Jagung" : "Tanaman Padi"}</Text>
-                </LinearGradient>
-              </View>
+          {filtered.map((lahan, index) => {
+            const id = getIdLahan(lahan);
+            const nama = getNamaLahan(lahan) || "Lahan tanpa nama";
+            const isJagung = isTanamanJagung(lahan);
+            const sudahPanen = !!(id && entries[id]?.panen);
 
-              <Text style={styles.dateText}>{formatTanggal(item.tanggalTanam)}</Text>
-            </TouchableOpacity>
-          ))}
+            return (
+              <Pressable
+                key={id || `${nama}-${index}`}
+                onPress={() => {
+                  if (!id) {
+                    console.warn("ID lahan tidak ditemukan:", lahan);
+                    return;
+                  }
+                  router.push({
+                    pathname: DETAIL_PATH,
+                    params: { idLahan: id },
+                  } as any);
+                }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: "#B7E4B9",
+                  borderRadius: scale(15),
+                  padding: scale(10),
+                  backgroundColor: "#FFFFFF",
+                }}
+              >
+                <Image
+                  source={isJagung ? jagungIcon : padiIcon}
+                  style={{
+                    width: scale(34),
+                    height: scale(44),
+                    resizeMode: "contain",
+                  }}
+                />
+                <View style={{ flex: 1, minWidth: 0, marginLeft: scale(10) }}>
+                  <Text
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={{
+                      fontFamily: "PoppinsBold",
+                      fontSize: scale(16),
+                      color: "#1A202C",
+                    }}
+                  >
+                    {nama}
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: scale(6),
+                      marginTop: scale(2),
+                    }}
+                  >
+                    <LinearGradient
+                      colors={["#187245", "#58C15C"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{
+                        borderRadius: scale(5.117),
+                        paddingHorizontal: scale(8),
+                        paddingVertical: scale(3),
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontFamily: "PoppinsMedium",
+                          fontSize: scale(12),
+                        }}
+                      >
+                        {isJagung ? "Tanaman Jagung" : "Tanaman Padi"}
+                      </Text>
+                    </LinearGradient>
+                    {sudahPanen && (
+                      <View
+                        style={{
+                          backgroundColor: "#105C2E",
+                          borderRadius: scale(4),
+                          paddingHorizontal: scale(6),
+                          paddingVertical: scale(1),
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#FFFFFF",
+                            fontFamily: "PoppinsMedium",
+                            fontSize: scale(9),
+                          }}
+                        >
+                          Sudah dipanen
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <Text
+                  style={{
+                    alignSelf: "flex-start",
+                    marginLeft: scale(6),
+                    fontFamily: "PoppinsRegular",
+                    fontSize: scale(9),
+                    color: "#4A5468",
+                  }}
+                >
+                  {formatTanggal(getTanggalTanam(lahan))}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
-        {/* 👇 INI DIA KOMPONEN DARI KATINGMU 👇 */}
-        <View style={{ alignItems: "center", marginTop: 10 }}>
+        {/* Card Tambah Lahan */}
+        <View style={{ width: "100%", alignItems: "center" }}>
           <AddLahanCard
-            value={newLahanInput}
-            onChangeText={setNewLahanInput}
-            onAdd={() => {
-              // Kosongkan karena komponen katingmu sudah otomatis nge-push halaman
-              console.log("Menyiapkan lahan baru...");
+            value={namaBaru}
+            onChangeText={setNamaBaru}
+            onAdd={(nama) => {
+              if (!nama.trim()) return;
+              setNamaBaru(nama);
+              setShowModal(false);
             }}
           />
         </View>
       </ScrollView>
-    </View>
+
+      {/* Pop up Input Lahan Baru */}
+      <Modal
+        visible={showModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowModal(false)}
+        statusBarTranslucent
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "center",
+            paddingHorizontal: scale(20),
+          }}
+        >
+          <Pressable
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: 0,
+              right: 0,
+            }}
+            onPress={() => setShowModal(false)}
+          />
+          <View
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: scale(14),
+              padding: scale(14),
+              gap: scale(10),
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: "PoppinsBold",
+                fontSize: scale(15),
+                color: "#1A202C",
+              }}
+            >
+              Input Lahan Baru
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: "#CBD5E1",
+                borderRadius: scale(10),
+                minHeight: scale(48),
+                paddingHorizontal: scale(12),
+              }}
+            >
+              <TextInput
+                value={namaBaru}
+                onChangeText={setNamaBaru}
+                autoFocus
+                placeholder="Contoh : Lahan 1"
+                placeholderTextColor="#6B7280"
+                returnKeyType="done"
+                onSubmitEditing={handleTambah}
+                underlineColorAndroid="transparent"
+                style={{
+                  flex: 1,
+                  height: scale(46),
+                  paddingVertical: 0,
+                  paddingHorizontal: 0,
+                  includeFontPadding: false,
+                  textAlignVertical: "center",
+                  fontFamily: "PoppinsItalic",
+                  fontSize: scale(12),
+                  color: "#1A202C",
+                }}
+              />
+              <SquarePen size={scale(20)} color="#1B5E20" />
+            </View>
+            <Pressable onPress={handleTambah}>
+              <LinearGradient
+                colors={GRADIENT}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  borderRadius: scale(8),
+                  paddingVertical: scale(10),
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#FFFFFF",
+                    fontFamily: "PoppinsBold",
+                    fontSize: scale(14),
+                  }}
+                >
+                  Tambah
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
-  headerContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 16, paddingTop: 50, paddingBottom: 18, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, position: "relative" },
-  backButton: { position: "absolute", left: 16, bottom: 18, zIndex: 1 },
-  headerTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "bold", textAlign: "center" },
-  scrollView: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40 },
-  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#F1F5F9", borderRadius: 12, borderWidth: 1, borderColor: "#E2E8F0", paddingHorizontal: 12, height: 46, marginBottom: 16 },
-  searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 14, color: "#1E293B" },
-  italicText: { fontStyle: "italic" },
-  normalText: { fontStyle: "normal" },
-  listContainer: { gap: 12, marginBottom: 24 },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#86EFAC",
-    padding: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-  },
-  iconContainer: { width: 48, height: 48, justifyContent: "center", alignItems: "center", marginRight: 12 },
-  iconImage: { width: 28, height: 28, resizeMode: "contain" },
-  cardContent: { flex: 1 },
-  lahanName: { fontSize: 16, fontWeight: "bold", color: "#1E293B", marginBottom: 4 },
-  cropBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, alignSelf: "flex-start" },
-  cropText: { color: "#FFFFFF", fontSize: 12, fontWeight: "600" },
-  dateText: { fontSize: 11, color: "#64748B", alignSelf: "flex-start", marginTop: 2 },
-});

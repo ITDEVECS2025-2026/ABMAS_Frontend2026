@@ -13,7 +13,7 @@ export interface Lahan {
   namaLahan: string;
   tanaman: "JAGUNG" | "PADI";
   tanggalTanam: string;
-  pupuk: string; // BARU: label pupuk yang dipilih di form Lahan Baru
+  pupuk: string;
   luasLahan: number;
   targetPanen: number;
   lokasi: LokasiLahan;
@@ -33,7 +33,6 @@ export interface LahanState {
   tempAlamat: string;
   setTempAlamat: (alamat: string) => void;
 
-  // Boleh dihapus jika sudah tidak dipakai di file manapun
   rentangSensorIdByLahan: Record<string, RentangSensorId>;
   setRentangSensorId: (lahanId: string, rentang: RentangSensorId) => void;
   getRentangSensorId: (lahanId: string) => RentangSensorId | undefined;
@@ -49,7 +48,8 @@ export const useLahanStore = create<LahanState>()(
       addLahan: (lahanData) => {
         const newLahan: Lahan = {
           ...lahanData,
-          id: `lahan-${Date.now()}`,
+          // ID berupa angka dalam detik, supaya Number(id) valid dan masih muat di kolom Int 32 bit
+          id: String(Math.floor(Date.now() / 1000)),
           createdAt: new Date().toISOString(),
         };
 

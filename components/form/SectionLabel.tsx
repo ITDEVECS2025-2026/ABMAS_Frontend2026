@@ -13,7 +13,7 @@ export default function SectionLabel({ icon: Icon, label }: SectionLabelProps) {
     <View 
       style={{ 
         flexDirection: "row", 
-        alignItems: "center", // <--- Ini yang membuat icon dan text sejajar di tengah
+        alignItems: "center",
         gap: scale(8),
       }}
     >
@@ -23,7 +23,7 @@ export default function SectionLabel({ icon: Icon, label }: SectionLabelProps) {
           fontFamily: "PoppinsBold",
           fontSize: scale(16),
           color: "#1E1E1E",
-          includeFontPadding: false, // <--- Menghilangkan padding bawaan font Android
+          includeFontPadding: false,
           textAlignVertical: "center",
         }}
       >

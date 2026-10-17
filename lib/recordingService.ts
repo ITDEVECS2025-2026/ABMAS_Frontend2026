@@ -1,3 +1,4 @@
+
 import { API_URL } from "./config";
 
 export interface RecordingPayload {
@@ -10,10 +11,11 @@ export interface RecordingPayload {
   luasLahan: number;
   targetPanen: number;
   id_recording: number[];
-} 
+}
 
 function getHeaders() {
   const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
+
   return {
     "Content-Type": "application/json",
     "x-api-key": SECRET_KEY || "",
@@ -21,6 +23,8 @@ function getHeaders() {
 }
 
 export async function sendRecording(payload: RecordingPayload) {
+  console.log("PAYLOAD /record:", JSON.stringify(payload, null, 2));
+
   const response = await fetch(`${API_URL}/record`, {
     method: "POST",
     headers: getHeaders(),
@@ -28,8 +32,24 @@ export async function sendRecording(payload: RecordingPayload) {
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+    const errorBody = await response.text();
+
+    console.error("DETAIL ERROR DARI SERVER:", errorBody);
+
+    throw new Error(
+      `HTTP Error ${response.status}: ${errorBody}`
+    );
   }
 
-  return response.json();
+  const text = await response.text();
+
+  console.log("RESPONS /record:", text);
+
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }

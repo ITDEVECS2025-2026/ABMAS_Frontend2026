@@ -1,4 +1,5 @@
 // components/sensor/StatusSensorCard.tsx
+//CARD PEMBACAAN SENSOR UNTUK BATERAI, BATTERY HEALTH, LORA STATUS, GPS ACTIVE, DAN LASTUPDATE
 import React from "react";
 import { View, Text } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";

@@ -1,4 +1,5 @@
 // components/form/InputSensorIdCard.tsx
+//CARD UNTUK INPUT ID LAHAN
 import React, { useRef, useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { PlusCircle, Pencil } from "lucide-react-native";
