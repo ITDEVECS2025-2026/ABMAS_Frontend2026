@@ -146,47 +146,66 @@ export default function SensorDetailScreen() {
   }
     
 
-  // Tombol Selesai: seluruh array idRecording dikirim ke server dalam satu permintaan
-  // Tombol Selesai: seluruh array idRecording dikirim ke server dalam satu permintaan
 async function handleKirim() {
-  if (!hasDataTaken) return;
+    if (!hasDataTaken) return;
+    setPhase("kirim");
 
-  setPhase("kirim");
+    if (!lahan || !idLahan) {
+      setErrorMessage("Data lahan tidak ditemukan.");
+      setAmbilDataState("error");
+      return;
+    }
 
-  if (!lahan || !idLahan) {
-    setErrorMessage("Data lahan tidak ditemukan.");
-    setAmbilDataState("error");
-    return;
+    const idLahanAngka = Number(idLahan);
+    if (!Number.isInteger(idLahanAngka)) {
+      setErrorMessage("ID lahan tidak valid. Buat ulang data lahan.");
+      setAmbilDataState("error");
+      return;
+    }
+
+    setAmbilDataState("loading");
+
+    try {
+      // 1. Calculate the average of all collected sensor snapshots
+      const averageReadings = averageSensorReadings(snapshotsRef.current);
+      console.log("📊 Rata-rata pembacaan sensor:", averageReadings);
+
+      // 2. Build the payload khusus untuk API Server (TIDAK ADA averageSensor)
+      const apiPayload = {
+        id_lahan: idLahanAngka,
+        device_id: id,
+        namaLahan: lahan.namaLahan,
+        tanaman: lahan.tanaman,
+        tanggalTanam: lahan.tanggalTanam,
+        pupuk: lahan.pupuk ?? "",
+        luasLahan: lahan.luasLahan,
+        targetPanen: lahan.targetPanen,
+        id_recording: idRecording,
+      };
+
+      // 3. Build payload lokal untuk Zustand (ADA averageSensor untuk halaman rekomendasi)
+      const localPayload = {
+        ...apiPayload,
+        averageSensor: averageReadings,
+      };
+
+      // 4. Send to Server HANYA menggunakan apiPayload
+      await sendRecording(apiPayload);
+
+      // 5. Save to local storage via Zustand store MENGGUNAKAN localPayload
+      const localId = useRecordingStore.getState().addRecording(localPayload, snapshotsRef.current);
+      
+      // 6. Store localId in ref for subsequent navigation
+      savedLocalIdRef.current = localId;
+      console.log("✅ Berhasil simpan ke Zustand & API. LocalId:", localId);
+
+      setAmbilDataState("success");
+    } catch (error) {
+      console.error("Gagal mengirim data rekaman:", error);
+      setErrorMessage("Gagal mengirim data ke server. Coba lagi.");
+      setAmbilDataState("error");
+    }
   }
-
-  const idLahanAngka = Number(idLahan);
-  if (!Number.isInteger(idLahanAngka)) {
-    setErrorMessage("ID lahan tidak valid. Buat ulang data lahan.");
-    setAmbilDataState("error");
-    return;
-  }
-
-  setAmbilDataState("loading");
-
-  try {
-    await sendRecording({
-      id_lahan: idLahanAngka,
-      device_id: id,
-      namaLahan: lahan.namaLahan,
-      tanaman: lahan.tanaman,
-      tanggalTanam: lahan.tanggalTanam,
-      pupuk: lahan.pupuk ?? "",
-      luasLahan: lahan.luasLahan,
-      targetPanen: lahan.targetPanen,
-      id_recording: idRecording,
-    });
-    setAmbilDataState("success");
-  } catch (error) {
-    console.error("Gagal mengirim data rekaman:", error);
-    setErrorMessage("Server tidak merespons. Coba lagi.");
-    setAmbilDataState("error");
-  }
-}
 
   function closeModal() {
     const berhasilKirim = phase === "kirim" && ambilDataState === "success";
