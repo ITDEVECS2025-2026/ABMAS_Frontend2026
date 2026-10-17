@@ -23,7 +23,7 @@ function getHeaders() {
 }
 
 export async function sendRecording(payload: RecordingPayload) {
-  console.log("PAYLOAD /record:", JSON.stringify(payload, null, 2));
+  console.log("PAYLOAD /record:", JSON.stringify(payload));
 
   const response = await fetch(`${API_URL}/record`, {
     method: "POST",
@@ -33,23 +33,11 @@ export async function sendRecording(payload: RecordingPayload) {
 
   if (!response.ok) {
     const errorBody = await response.text();
-
     console.error("DETAIL ERROR DARI SERVER:", errorBody);
-
-    throw new Error(
-      `HTTP Error ${response.status}: ${errorBody}`
-    );
+    throw new Error(`HTTP Error ${response.status}: ${errorBody}`);
   }
 
+  // Aman jika server membalas tanpa isi (misalnya 201 atau 204)
   const text = await response.text();
-
-  console.log("RESPONS /record:", text);
-
-  if (!text) return null;
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
+  return text ? JSON.parse(text) : null;
 }
