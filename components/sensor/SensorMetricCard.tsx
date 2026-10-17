@@ -1,3 +1,4 @@
+//CARD UNTUK PEMBACAAN SENSOR PADA DATA N,P,K,EC,PH,T,RH%
 import React from "react";
 import { Text, View } from "react-native";
 import { Sprout, Leaf, ShieldCheck, Zap, FlaskConical, Thermometer, Droplets } from "lucide-react-native";

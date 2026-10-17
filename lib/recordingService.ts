@@ -1,3 +1,4 @@
+
 import { API_URL } from "./config";
 
 export interface RecordingPayload {
@@ -14,6 +15,7 @@ export interface RecordingPayload {
 
 function getHeaders() {
   const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
+
   return {
     "Content-Type": "application/json",
     "x-api-key": SECRET_KEY || "",
