@@ -1,13 +1,21 @@
+import AddLahanCard from "@/components/form/AddlahanCard";
 import { COLORS } from "@/constants";
 import { useSensorStore } from "@/store/sensorContext";
 import { Ionicons } from "@expo/vector-icons";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { router } from "expo-router";
+import {
+  ChartNoAxesCombined,
+  CloudMoonRain,
+  Droplets,
+  ThermometerSun,
+} from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -17,8 +25,6 @@ import {
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AddLahanCard from "@/components/form/AddlahanCard";
-import { ChartNoAxesCombined, CloudMoonRain, ThermometerSun, Droplets } from "lucide-react-native";
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -66,6 +72,107 @@ export default function DashboardScreen() {
     return "Selamat Malam,";
   };
 
+  // buat fetch dari weather API : Suhu, Kelembapan, Prakiraan Cuaca
+  const [temperature, setTemperature] = useState<number | null>(null);
+  const [humidity, setHumidity] = useState<number | null>(null);
+  const [forecastText, setForecastText] = useState<string>('Memuat prakiraan cuaca...');
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchWeatherData = async () => {
+      try {
+        // Example coordinates (Jakarta). Change to user location if using expo-location.
+        const latitude = -6.2088;
+        const longitude = 106.8456;
+
+        // Fetch current and hourly data in a single request
+        const response = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m&hourly=precipitation_probability,weathercode`
+        );
+        const data = await response.json();
+
+        // 1. Set current temperature and humidity
+        if (data && data.current) {
+          setTemperature(data.current.temperature_2m);
+          setHumidity(data.current.relative_humidity_2m);
+        }
+
+        // 2. Set forecast text from hourly data
+        if (data && data.hourly) {
+          const times: string[] = data.hourly.time;
+          const probabilities: number[] = data.hourly.precipitation_probability;
+          const weatherCodes: number[] = data.hourly.weathercode;
+
+          const now = new Date();
+          let foundForecast = false;
+
+          for (let i = 0; i < times.length; i++) {
+            const forecastTime = new Date(times[i]);
+            if (forecastTime >= now) {
+              const hourString = forecastTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const condition = getWeatherDescription(weatherCodes[i]);
+              const rainProb = probabilities[i];
+
+              if (rainProb > 40) {
+                setForecastText(`Potensi ${condition.toLowerCase()} diperkirakan pukul ${hourString} (${rainProb}% peluang).`);
+              } else {
+                setForecastText(`Cuaca ${condition.toLowerCase()} diperkirakan pukul ${hourString}.`);
+              }
+              
+              foundForecast = true;
+              break;
+            }
+          }
+
+          if (!foundForecast) {
+            setForecastText('Prakiraan cuaca stabil untuk beberapa jam ke depan.');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch weather data:', error);
+        setForecastText('Gagal memuat prakiraan cuaca.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWeatherData();
+  }, []);
+
+  // weather description based on code
+  const getWeatherDescription = (code: number): string => {
+    switch (code) {
+      case 0:
+        return "Cerah";
+      case 1:
+      case 2:
+      case 3:
+        return "Berawan";
+      case 45:
+      case 48:
+        return "Berkabut";
+      case 51:
+      case 53:
+      case 55:
+        return "Gerimis ringan";
+      case 61:
+      case 63:
+        return "Hujan ringan/sedang";
+      case 65:
+        return "Hujan deras";
+      case 71:
+      case 73:
+      case 75:
+        return "Salju";
+      case 95:
+      case 96:
+      case 99:
+        return "Badai petir";
+      default:
+        return "Kondisi normal";
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       {/* Header */}
@@ -81,7 +188,9 @@ export default function DashboardScreen() {
             <Text style={styles.name}>{settings.farmerName}</Text>
           </View>
 
-          <TouchableOpacity onPress={() => router.push("/(features)/(setting)")}>
+          <TouchableOpacity
+            onPress={() => router.push("/(features)/(setting)")}
+          >
             <Ionicons name="settings-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -94,17 +203,35 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.suhudanlembap}>
+          {/* Suhu Card */}
           <LinearGradient
             colors={["#105C2E", "#8C6A09"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1.3, y: 0 }}
             style={styles.suhucard}
           >
-            <ThermometerSun size={29} color="#FFF" style={styles.buttonIconLeft} />
-            <View style={{ flexDirection: "column", width: "100%", height: "100%", justifyContent: "flex-start", alignItems: "center", paddingTop: 5 }}>
+            <ThermometerSun
+              size={29}
+              color="#FFF"
+              style={styles.buttonIconLeft}
+            />
+            <View style={styles.contentContainer}>
               <Text style={styles.buttonText}>Suhu</Text>
+              {loading ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#FFF"
+                  style={{ marginTop: 5 }}
+                />
+              ) : (
+                <Text style={styles.valueText}>
+                  {temperature !== null ? `${temperature}°C` : "--"}
+                </Text>
+              )}
             </View>
           </LinearGradient>
+
+          {/* Lembap Card */}
           <LinearGradient
             colors={["#105C2E", "#8C6A09"]}
             start={{ x: 0, y: 0 }}
@@ -112,34 +239,64 @@ export default function DashboardScreen() {
             style={styles.lembapcard}
           >
             <Droplets size={29} color="#FFF" style={styles.buttonIconLeft} />
-            <View style={{ flexDirection: "column", width: "100%", height: "100%", justifyContent: "flex-start", alignItems: "center", paddingTop: 5 }}>
+            <View style={styles.contentContainer}>
               <Text style={styles.buttonText}>Lembap</Text>
+              {loading ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#FFF"
+                  style={{ marginTop: 5 }}
+                />
+              ) : (
+                <Text style={styles.valueText}>
+                  {humidity !== null ? `${humidity}%` : "--"}
+                </Text>
+              )}
             </View>
           </LinearGradient>
         </View>
 
-        <AddLahanCard value={namaLahan} onChangeText={setNamaLahan} onAdd={handleTambah} />
+        <AddLahanCard
+          value={namaLahan}
+          onChangeText={setNamaLahan}
+          onAdd={handleTambah}
+        />
 
-        <TouchableOpacity onPress={() => router.push("/(features)/(monitoring)")} activeOpacity={0.8}>
+        <TouchableOpacity
+          onPress={() => router.push("/(features)/(monitoring)")}
+          activeOpacity={0.8}
+        >
           <LinearGradient
             colors={["#105C2E", "#8C6A09"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1.3, y: 0 }}
             style={styles.monitoringtanah}
           >
-            <ChartNoAxesCombined color="#FFF" size={22} style={styles.buttonIconLeft} />
+            <ChartNoAxesCombined
+              color="#FFF"
+              size={22}
+              style={styles.buttonIconLeft}
+            />
             <Text style={styles.buttonText}>Monitoring Tanah</Text>
           </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/(main)/history")} activeOpacity={0.8}>
+        <TouchableOpacity
+          onPress={() => router.push("/(main)/history")}
+          activeOpacity={0.8}
+        >
           <LinearGradient
             colors={["#105C2E", "#8C6A09"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1.3, y: 0 }}
             style={styles.monitoringtanah}
           >
-            <MaterialIcons name="history" size={29} color="#FFF" style={styles.buttonIconLeft} />
+            <MaterialIcons
+              name="history"
+              size={29}
+              color="#FFF"
+              style={styles.buttonIconLeft}
+            />
             <Text style={styles.buttonText}>History Pemupukan</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -151,12 +308,28 @@ export default function DashboardScreen() {
           style={styles.prakiraancuaca}
         >
           <CloudMoonRain size={29} color="#FFF" style={styles.buttonIconLeft} />
-          <View style={{ flexDirection: "column", width: "100%", alignItems: "flex-end" }}>
+          <View
+            style={{
+              flexDirection: "column",
+              width: "100%",
+              alignItems: "flex-end",
+            }}
+          >
             <View style={{ width: "100%", alignItems: "center" }}>
               <Text style={styles.buttonTextPrakiraan}>Prakiraan Cuaca</Text>
             </View>
-            <View style={{ width: "85%", alignItems: "flex-end" }}>
-              <Text style={{ color: "#FFF", fontSize: 12 }}>Hujan ringan diperkirakan sore ini pukul 16:00.</Text>
+            <View
+              style={{ width: "85%", alignItems: "flex-end", marginTop: 4 }}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text
+                  style={{ color: "#FFF", fontSize: 12, textAlign: "right" }}
+                >
+                  {forecastText}
+                </Text>
+              )}
             </View>
           </View>
         </LinearGradient>
@@ -177,15 +350,22 @@ export default function DashboardScreen() {
               }}
             >
               <Marker
-                coordinate={{ latitude: location.latitude, longitude: location.longitude }}
+                coordinate={{
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                }}
                 title="Lokasi Anda"
               />
             </MapView>
           </View>
 
           <View style={styles.coordinateCard}>
-            <Text style={styles.coordinateText}>Latitude : {location.latitude.toFixed(6)}</Text>
-            <Text style={styles.coordinateText}>Longitude : {location.longitude.toFixed(6)}</Text>
+            <Text style={styles.coordinateText}>
+              Latitude : {location.latitude.toFixed(6)}
+            </Text>
+            <Text style={styles.coordinateText}>
+              Longitude : {location.longitude.toFixed(6)}
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -202,11 +382,20 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10,
   },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   greeting: { color: "white", fontSize: 16 },
   name: { color: "#fff", fontWeight: "800", fontSize: 25 },
   container: { flex: 1, paddingHorizontal: 16, marginTop: 0 },
-  scrollContent: { paddingTop: 20, paddingHorizontal: 24, paddingBottom: 40, gap: 16 },
+  scrollContent: {
+    paddingTop: 20,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    gap: 16,
+  },
   suhudanlembap: {
     backgroundColor: "#FFF",
     borderRadius: 12,
@@ -215,8 +404,19 @@ const styles = StyleSheet.create({
     gap: 5,
     height: 70,
   },
-  suhucard: { flexDirection: "column", width: "50%", borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  lembapcard: { width: "50%", borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  suhucard: {
+    flexDirection: "column",
+    width: "50%",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lembapcard: {
+    width: "50%",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   monitoringtanah: {
     width: "100%",
     height: 60,
@@ -246,10 +446,42 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     padding: 12,
   },
-  lokasiHeader: { flexDirection: "row", alignItems: "center", justifyContent: "center", height: 40, gap: 8, marginBottom: 10 },
+  lokasiHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 40,
+    gap: 8,
+    marginBottom: 10,
+  },
   lokasiHeaderText: { fontWeight: "bold", fontSize: 18, color: "#006134" },
-  mapWrapper: { width: "100%", height: 120, borderRadius: 14, overflow: "hidden" },
+  mapWrapper: {
+    width: "100%",
+    height: 120,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
   map: { width: "100%", height: "100%" },
-  coordinateCard: { backgroundColor: "#fff", padding: 12, borderRadius: 10, marginTop: 10, elevation: 1 },
+  coordinateCard: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 10,
+    elevation: 1,
+  },
   coordinateText: { fontSize: 14, color: "#333", lineHeight: 20 },
+  contentContainer: {
+    flexDirection: "column",
+    width: "100%",
+    height: "100%",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    paddingTop: 5,
+  },
+  valueText: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 4,
+  },
 });
