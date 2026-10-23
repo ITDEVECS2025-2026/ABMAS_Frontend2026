@@ -23,7 +23,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function DashboardScreen() {
@@ -72,7 +71,6 @@ export default function DashboardScreen() {
     return "Selamat Malam,";
   };
 
-  // buat fetch dari weather API : Suhu, Kelembapan, Prakiraan Cuaca
   const [temperature, setTemperature] = useState<number | null>(null);
   const [humidity, setHumidity] = useState<number | null>(null);
   const [forecastText, setForecastText] = useState<string>('Memuat prakiraan cuaca...');
@@ -81,23 +79,19 @@ export default function DashboardScreen() {
   useEffect(() => {
     const fetchWeatherData = async () => {
       try {
-        // Example coordinates (Jakarta). Change to user location if using expo-location.
         const latitude = -6.2088;
         const longitude = 106.8456;
 
-        // Fetch current and hourly data in a single request
         const response = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m&hourly=precipitation_probability,weathercode`
         );
         const data = await response.json();
 
-        // 1. Set current temperature and humidity
         if (data && data.current) {
           setTemperature(data.current.temperature_2m);
           setHumidity(data.current.relative_humidity_2m);
         }
 
-        // 2. Set forecast text from hourly data
         if (data && data.hourly) {
           const times: string[] = data.hourly.time;
           const probabilities: number[] = data.hourly.precipitation_probability;
@@ -118,7 +112,7 @@ export default function DashboardScreen() {
               } else {
                 setForecastText(`Cuaca ${condition.toLowerCase()} diperkirakan pukul ${hourString}.`);
               }
-              
+
               foundForecast = true;
               break;
             }
@@ -139,7 +133,6 @@ export default function DashboardScreen() {
     fetchWeatherData();
   }, []);
 
-  // weather description based on code
   const getWeatherDescription = (code: number): string => {
     switch (code) {
       case 0:
@@ -185,7 +178,7 @@ export default function DashboardScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.name}>{settings.farmerName}</Text>
+            <Text style={styles.name}>{settings.farmerName || "Nama Petani"}</Text>
           </View>
 
           <TouchableOpacity
@@ -265,6 +258,7 @@ export default function DashboardScreen() {
         <TouchableOpacity
           onPress={() => router.push("/(features)/(monitoring)")}
           activeOpacity={0.8}
+          style={{ width: "100%" }} // <--- Tambahkan ini
         >
           <LinearGradient
             colors={["#105C2E", "#8C6A09"]}
@@ -284,6 +278,7 @@ export default function DashboardScreen() {
         <TouchableOpacity
           onPress={() => router.push("/(main)/history")}
           activeOpacity={0.8}
+          style={{ width: "100%" }} // <--- Tambahkan ini juga
         >
           <LinearGradient
             colors={["#105C2E", "#8C6A09"]}
@@ -340,7 +335,8 @@ export default function DashboardScreen() {
             <Text style={styles.lokasiHeaderText}>Lokasi Sawah</Text>
           </View>
           <View style={styles.mapWrapper}>
-            <MapView
+            {/* MATIKAN SEMENTARA MAP-NYA UNTUK TESTING */}
+            {/* <MapView
               style={styles.map}
               region={{
                 latitude: location.latitude,
@@ -356,7 +352,7 @@ export default function DashboardScreen() {
                 }}
                 title="Lokasi Anda"
               />
-            </MapView>
+            </MapView> */}
           </View>
 
           <View style={styles.coordinateCard}>
@@ -389,13 +385,20 @@ const styles = StyleSheet.create({
   },
   greeting: { color: "white", fontSize: 16 },
   name: { color: "#fff", fontWeight: "800", fontSize: 25 },
-  container: { flex: 1, paddingHorizontal: 16, marginTop: 0 },
+
+  // 1. Ubah padding container menjadi 0 karena sebelumnya bentrok dengan scrollContent
+  container: { flex: 1, paddingHorizontal: 0, marginTop: 0 },
+
+  // 2. Gunakan margin/padding 20 di sini agar lebarnya proporsional sekitar ~354 mengimbangi AddLahanCard
   scrollContent: {
     paddingTop: 20,
-    paddingHorizontal: 24,
+    paddingHorizontal: 30,
     paddingBottom: 40,
     gap: 16,
+    alignItems: 'center', // Pastikan semua elemen rata tengah
   },
+
+  // 3. Tambahkan width 100% agar otomatis mengisi ruang dari margin yang baru 
   suhudanlembap: {
     backgroundColor: "#FFF",
     borderRadius: 12,
@@ -403,16 +406,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 5,
     height: 70,
+    width: "100%",
   },
+
+  // 4. Ubah lebar card setengah dari 50% menjadi flex: 1 agar tidak overflow (meluber) saat ditambah gap
   suhucard: {
     flexDirection: "column",
-    width: "50%",
+    flex: 1,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   lembapcard: {
-    width: "50%",
+    flex: 1,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -423,6 +429,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
   },
   prakiraancuaca: {
@@ -432,7 +439,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 30,
     position: "relative",
   },
   buttonIconLeft: { position: "absolute", left: 16 },
