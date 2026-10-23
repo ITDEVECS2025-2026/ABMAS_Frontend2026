@@ -1,12 +1,17 @@
 // app/(soil)/(setting)/index.tsx
-import React, { useEffect, useState } from "react";
 import ScreenHeader from "@/components/ui/ScreenHeader";
-import {
-  View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, TextInput, Alert
-} from "react-native";
 import { COLORS } from "@/constants";
 import { useSensorStore } from "@/store/sensorContext";
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingScreen() {

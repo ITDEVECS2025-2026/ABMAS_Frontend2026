@@ -1,4 +1,4 @@
-// app/(features)/(history)/index.tsx — halaman History Pemupukan
+// app/(features)/(history)/index.tsx — halaman utama History Pemupukan
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ArrowLeft, PlusCircle, Search, SquarePen } from "lucide-react-native";

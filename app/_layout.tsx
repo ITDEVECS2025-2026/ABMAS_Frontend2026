@@ -33,7 +33,9 @@ export default function RootLayout() {
           screenOptions={{
             headerShown: false,
           }}
-        />
+        >
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+        </Stack>
       </SensorProvider>
     </SafeAreaProvider>
   );
