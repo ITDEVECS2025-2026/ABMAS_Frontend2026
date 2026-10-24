@@ -1,3 +1,4 @@
+//D:\APLIKASI TETA\ABMAS_Frontend2026\components\sensor\SensorMetricCard.tsx
 //CARD UNTUK PEMBACAAN SENSOR PADA DATA N,P,K,EC,PH,T,RH%
 import React from "react";
 import { Text, View } from "react-native";

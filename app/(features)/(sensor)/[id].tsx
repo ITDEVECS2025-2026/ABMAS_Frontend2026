@@ -9,7 +9,7 @@ import {
   RefreshCcw,
   XCircle,
 } from "lucide-react-native";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -18,7 +18,7 @@ import {
   Text,
   View,
 } from "react-native";
-import MapView, { Marker, UrlTile } from "react-native-maps";
+import { WebView } from "react-native-webview";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import SensorCard from "@/components/sensor/SensorCardGrid";
@@ -31,21 +31,76 @@ import { useLahanStore } from "@/store/lahanStore";
 import { useSensorStore } from "@/store/sensorContext";
 import { getTimeAgo } from "@/utils/gps";
 import { scale } from "@/utils/scale";
-import { averageSensorReadings } from '@/utils/averageReadings'; //sensor averager utility
+import { averageSensorReadings } from '@/utils/averageReadings';
+import type { RecordingPayload } from "@/lib/recordingService";
+
 
 // GANTI PATH INI SESUAI LOKASI FILE ZUSTAND ANDA:
-import { useRecordingStore, type RecordedSnapshot } from "@/store/recordingStore"; 
+import { useRecordingStore, type RecordedSnapshot } from "@/store/recordingStore";
 
 const CARD_WIDTH = 336;
 
 type AmbilDataState = "idle" | "confirm" | "loading" | "success" | "error";
 type Phase = "ambil" | "kirim";
 
+// Generator Peta HTML OpenStreetMap (Leaflet)
+// Generator Peta HTML OpenStreetMap (Leaflet) yang 100% Gratis Tanpa API Key
+const generateMapHTML = (lat: number, lon: number) => `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <style>
+        body { padding: 0; margin: 0; background-color: transparent; }
+        #map { width: 100vw; height: 100vh; }
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <script>
+        var map = L.map('map', {
+          zoomControl: false,
+          attributionControl: false,
+          dragging: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false,
+          touchZoom: false
+        }).setView([${lat}, ${lon}], 15);
+
+        // Ganti ke OpenStreetMap standar agar tulisan API Key hilang
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19
+        }).addTo(map);
+
+        var icon = L.icon({
+          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41]
+        });
+        L.marker([${lat}, ${lon}], {icon: icon}).addTo(map);
+      </script>
+    </body>
+  </html>
+`;
+
 export default function SensorDetailScreen() {
   const params = useLocalSearchParams();
   const id = params.id as string;
   const idLahan = params.idLahan ? String(params.idLahan) : null;
   const router = useRouter();
+  const recordings = useRecordingStore((state) => state.recordings ?? []);
+
+  const saveSnapshot = useRecordingStore((state) => state.saveSnapshot);
+  const markSubmitted = useRecordingStore((state) => state.markSubmitted);
+
+  const existingRecording = recordings.find(
+    (recording) =>
+      String(recording.id_lahan) === String(idLahan) &&
+      String(recording.device_id) === String(id)
+  );
 
   const { getSensorById } = useSensorStore();
   const getLahanById = useLahanStore((state) => state.getLahanById);
@@ -60,29 +115,55 @@ export default function SensorDetailScreen() {
   const sensor: Sensor | undefined =
     refreshedSensor && refreshedSensor.lastUpdated > (storeSensor?.lastUpdated ?? 0)
       ? {
-          ...refreshedSensor,
-          lastReadingId: refreshedSensor.lastReadingId ?? storeSensor?.lastReadingId,
-        }
+        ...refreshedSensor,
+        lastReadingId: refreshedSensor.lastReadingId ?? storeSensor?.lastReadingId,
+      }
       : storeSensor;
 
-  const [ambilDataState, setAmbilDataState] = useState<AmbilDataState>("idle");
+  const [ambilDataState, setAmbilDataState] =
+    useState<AmbilDataState>("idle");
+
   const [phase, setPhase] = useState<Phase>("ambil");
-  const [idRecording, setIdRecording] = useState<number[]>([]);
+
+  const [idRecording, setIdRecording] = useState<number[]>(
+    existingRecording?.id_recording ??
+    (existingRecording?.snapshots ?? []).map((_, index) => index)
+  );
+
   const [errorMessage, setErrorMessage] = useState("");
 
-  // PENGGUNAAN REF AGAR DATA TERSIMPAN SECARA SINKRON DAN ANTI-GAGAL
   const lastRecordedTimestampRef = useRef<number | null>(null);
-  const snapshotsRef = useRef<RecordedSnapshot[]>([]);
-  const savedLocalIdRef = useRef<string | null>(null);
+
+  const snapshotsRef = useRef<RecordedSnapshot[]>(
+    existingRecording?.snapshots ?? []
+  );
+
+  const savedLocalIdRef = useRef<string | null>(
+    existingRecording?.localId ?? null
+  );
+
+  useEffect(() => {
+    if (!existingRecording) return;
+
+    // Pulihkan semua rekaman sebelumnya untuk lahan dan sensor ini.
+    snapshotsRef.current = existingRecording.snapshots ?? [];
+
+    setIdRecording(
+      existingRecording.id_recording ??
+      (existingRecording.snapshots ?? []).map((_, index) => index)
+    );
+
+    savedLocalIdRef.current = existingRecording.localId;
+  }, [existingRecording]);
 
   if (!sensor) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
         <ScreenHeader title="Sensor" />
         <Text style={{ textAlign: "center", marginTop: 40, fontFamily: "PoppinsMedium" }}>
           Sensor tidak ditemukan
         </Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -118,35 +199,141 @@ export default function SensorDetailScreen() {
   async function handleAmbilData() {
     setPhase("ambil");
     setAmbilDataState("loading");
+    setErrorMessage("");
 
     try {
+      // Beri jeda untuk menampilkan status loading
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
+      // Cegah pembacaan sensor yang sama direkam berulang kali
       if (lastRecordedTimestampRef.current === sensor.lastUpdated) {
-        setErrorMessage("Belum ada pembaruan data baru dari sensor. Tunggu beberapa saat.");
+        setErrorMessage(
+          "Belum ada pembaruan data baru dari sensor. Tunggu beberapa saat."
+        );
         setAmbilDataState("error");
         return;
       }
 
-      const nextId = idRecording.length;
-      setIdRecording((prev) => [...prev, nextId]);
-      
-      // Simpan snapshot pembacaan sensor ke ref untuk dihitung rata-ratanya nanti
-      if ((sensor as any).soilData) {
-        snapshotsRef.current.push((sensor as any).soilData);
+      // Pastikan data sensor tersedia
+      const soilData = (sensor as any).soilData;
+
+      if (!soilData) {
+        setErrorMessage("Data sensor belum tersedia. Silakan coba kembali.");
+        setAmbilDataState("error");
+        return;
       }
-      
+
+      // Buat snapshot dengan struktur yang sesuai dengan RecordedSnapshot
+      const snapshot: RecordedSnapshot = {
+        takenAt: new Date().toISOString(),
+        N: Number(soilData.N ?? 0),
+        P: Number(soilData.P ?? 0),
+        K: Number(soilData.K ?? 0),
+        EC: Number(soilData.EC ?? 0),
+        pH: Number(soilData.pH ?? 0),
+        temperature: Number(
+          soilData.temperature ?? soilData.suhu ?? 0
+        ),
+        humidity: Number(
+          soilData.humidity ?? soilData.kelembapan ?? 0
+        ),
+      };
+
+      // Pastikan nilai yang akan disimpan valid
+      const sensorValues = [
+        snapshot.N,
+        snapshot.P,
+        snapshot.K,
+        snapshot.EC,
+        snapshot.pH,
+        snapshot.temperature,
+        snapshot.humidity,
+      ];
+
+      if (!sensorValues.every((value) => Number.isFinite(value))) {
+        setErrorMessage("Data sensor tidak valid. Silakan ambil data kembali.");
+        setAmbilDataState("error");
+        return;
+      }
+
+      // Nomor pembacaan berikutnya
+      const nextId = idRecording.length;
+
+      // Simpan ID pembacaan ke state halaman
+      setIdRecording((prev) => [...prev, nextId]);
+
+      // Simpan snapshot ke ref agar dapat digunakan untuk menghitung rata-rata
+      snapshotsRef.current.push(snapshot);
+
+      /*
+       * Simpan snapshot langsung ke Zustand.
+       * Data tidak perlu menunggu pengguna menekan tombol Selesai
+       * atau melakukan rekomendasi pupuk.
+       *
+       * Pastikan idLahan, id, dan payload sesuai dengan variabel
+       * yang digunakan pada halaman sensor kamu.
+       */
+      const lahanId = Number(idLahan);
+
+      if (!Number.isFinite(lahanId) || lahanId <= 0) {
+        // Kembalikan perubahan lokal jika identitas lahan tidak valid.
+        snapshotsRef.current.pop();
+        setIdRecording((prev) => prev.slice(0, -1));
+
+        setErrorMessage("ID lahan tidak valid. Data belum dapat disimpan.");
+        setAmbilDataState("error");
+        return;
+      }
+
+      const lahan = useLahanStore
+        .getState()
+        .getLahanById(String(idLahan));
+
+      if (!lahan) {
+        snapshotsRef.current.pop();
+        setIdRecording((prev) => prev.slice(0, -1));
+
+        setErrorMessage("Data lahan tidak ditemukan. Data belum dapat disimpan.");
+        setAmbilDataState("error");
+        return;
+      }
+
+      const recordingPayload: RecordingPayload = {
+        id_lahan: lahanId,
+        device_id: String(id),
+        namaLahan: lahan.namaLahan,
+        tanaman: lahan.tanaman,
+        tanggalTanam: lahan.tanggalTanam,
+        pupuk: lahan.pupuk ?? "",
+        luasLahan: Number(lahan.luasLahan),
+        targetPanen: Number(lahan.targetPanen),
+        id_recording: [...idRecording, nextId],
+      };
+
+      // Simpan ke Zustand dan dapatkan ID sesi lokal.
+      const localId = useRecordingStore
+        .getState()
+        .saveSnapshot(recordingPayload, snapshot);
+
+      // Simpan ID sesi agar halaman berikutnya menggunakan sesi yang sama.
+      savedLocalIdRef.current = localId;
+
+      // Tandai timestamp setelah snapshot berhasil disimpan.
       lastRecordedTimestampRef.current = sensor.lastUpdated;
+
       setAmbilDataState("success");
     } catch (error) {
-      console.error("Gagal mengambil data:", error);
-      setErrorMessage("Terjadi kesalahan saat mengambil data sensor.");
+      console.error("Gagal mengambil dan menyimpan data sensor:", error);
+
+      setErrorMessage(
+        "Terjadi kesalahan saat mengambil atau menyimpan data sensor."
+      );
       setAmbilDataState("error");
     }
   }
-    
 
-async function handleKirim() {
+
+  async function handleKirim() {
     if (!hasDataTaken) return;
     setPhase("kirim");
 
@@ -166,11 +353,9 @@ async function handleKirim() {
     setAmbilDataState("loading");
 
     try {
-      // 1. Calculate the average of all collected sensor snapshots
       const averageReadings = averageSensorReadings(snapshotsRef.current);
       console.log("📊 Rata-rata pembacaan sensor:", averageReadings);
 
-      // 2. Build the payload khusus untuk API Server (TIDAK ADA averageSensor)
       const apiPayload = {
         id_lahan: idLahanAngka,
         device_id: id,
@@ -183,19 +368,19 @@ async function handleKirim() {
         id_recording: idRecording,
       };
 
-      // 3. Build payload lokal untuk Zustand (ADA averageSensor untuk halaman rekomendasi)
       const localPayload = {
         ...apiPayload,
         averageSensor: averageReadings,
       };
 
-      // 4. Send to Server HANYA menggunakan apiPayload
       await sendRecording(apiPayload);
+      const localId = savedLocalIdRef.current;
 
-      // 5. Save to local storage via Zustand store MENGGUNAKAN localPayload
-      const localId = useRecordingStore.getState().addRecording(localPayload, snapshotsRef.current);
-      
-      // 6. Store localId in ref for subsequent navigation
+      if (!localId) {
+        throw new Error("Sesi rekaman lokal tidak ditemukan.");
+      }
+
+      markSubmitted(localId);
       savedLocalIdRef.current = localId;
       console.log("✅ Berhasil simpan ke Zustand & API. LocalId:", localId);
 
@@ -213,14 +398,12 @@ async function handleKirim() {
 
     if (berhasilKirim && savedLocalIdRef.current) {
       const finalLocalId = savedLocalIdRef.current;
-      
-      // Reset semua reference agar bersih saat user membuka menu ini lagi kedepannya
+
       savedLocalIdRef.current = null;
       snapshotsRef.current = [];
       setIdRecording([]);
-      lastRecordedTimestampRef.current = null; 
+      lastRecordedTimestampRef.current = null;
 
-      // Navigasi
       router.replace({
         pathname: "/(features)/(rekomendasi)",
         params: { localId: finalLocalId }
@@ -229,7 +412,7 @@ async function handleKirim() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
       <ScreenHeader title={sensor.name} />
 
       <ScrollView
@@ -268,7 +451,7 @@ async function handleKirim() {
         </View>
 
         <SensorCard sensorId={sensor.id} />
-        
+
         {/* Tombol Refresh Data */}
         <Pressable
           onPress={handleRefresh}
@@ -544,33 +727,17 @@ async function handleKirim() {
                   borderTopColor: "#006134",
                   overflow: "hidden",
                   pointerEvents: "none",
+                  backgroundColor: "#f0f0f0", // Tambahan background abu-abu saat WebView loading
                 }}
               >
-                <MapView
-                  style={{ width: "100%", height: "100%" }}
-                  mapType="none"
-                  region={{
-                    latitude: sensor.location!.latitude,
-                    longitude: sensor.location!.longitude,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
+                <WebView
+                  originWhitelist={['*']}
+                  source={{ html: generateMapHTML(sensor.location!.latitude, sensor.location!.longitude) }}
+                  style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
                   scrollEnabled={false}
-                  zoomEnabled={false}
-                  pitchEnabled={false}
-                  rotateEnabled={false}
-                >
-                  <UrlTile
-                    urlTemplate="https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
-                    maximumZ={19}
-                  />
-                  <Marker
-                    coordinate={{
-                      latitude: sensor.location!.latitude,
-                      longitude: sensor.location!.longitude,
-                    }}
-                  />
-                </MapView>
+                  showsHorizontalScrollIndicator={false}
+                  showsVerticalScrollIndicator={false}
+                />
               </View>
             )}
           </View>
@@ -800,6 +967,6 @@ async function handleKirim() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }

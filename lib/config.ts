@@ -1,3 +1,4 @@
+//D:\APLIKASI TETA\ABMAS_Frontend2026\lib\config.ts
 import { Platform } from 'react-native';
 
 // Gunakan 10.0.2.2 khusus untuk Android Emulator, localhost untuk iOS/Web

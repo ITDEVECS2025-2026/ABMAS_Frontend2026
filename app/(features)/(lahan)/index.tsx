@@ -132,7 +132,7 @@ export default function LahanBaruPage() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
       <ScreenHeader title="Lahan Baru" />
 
       <ScrollView
@@ -393,7 +393,7 @@ export default function LahanBaruPage() {
           </LinearGradient>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

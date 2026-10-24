@@ -16,6 +16,7 @@
       }
     },
     "android": {
+      "config":{"googleMaps":{ "apiKey": "ISI_API_KEY_ANDROID"}},
       "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
@@ -27,7 +28,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Izinkan ABMA mengakses GPS untuk sensor sawah."
+          "locationWhenInUsePermission": "Aplikasi membutuhkan lokasi untuk menampilkan peta dan prakiraan cuaca di sekitar Anda."
         }
       ],
       "expo-font",

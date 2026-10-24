@@ -1,7 +1,7 @@
-// app/(soil)/(setting)/index.tsx
+// app/(features)/(setting)/index.tsx
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { COLORS } from "@/constants";
-import { useSensorStore } from "@/store/sensorContext";
+import { useSettingsStore } from "@/store/settingsStore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -10,34 +10,35 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingScreen() {
-  const { settings, updateSettings } = useSensorStore();
+  const farmerName = useSettingsStore((state) => state.farmerName);
+  const setFarmerName = useSettingsStore((state) => state.setFarmerName);
 
-  const [namaPetani, setNamaPetani] = useState(settings.farmerName);
+  const [namaPetani, setNamaPetani] = useState(farmerName);
 
   useEffect(() => {
-    setNamaPetani(settings.farmerName);
-  }, [settings]);
+    setNamaPetani(farmerName);
+  }, [farmerName]);
 
-  const handleSave = async () => {
-    try {
-      await updateSettings({ farmerName: namaPetani });
-      Alert.alert("Sukses", "Pengaturan berhasil disimpan!");
-    } catch (e) {
-      Alert.alert("Error", "Gagal menyimpan pengaturan.");
-      console.log(e);
+  const handleSave = () => {
+    if (!namaPetani.trim()) {
+      Alert.alert("Nama kosong", "Nama petani tidak boleh kosong.");
+      return;
     }
+
+    setFarmerName(namaPetani);
+    Alert.alert("Sukses", "Pengaturan berhasil disimpan!");
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       <ScreenHeader title="Settings" />
 
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.sectionLabel}>Set Nama Petani</Text>
         <View style={styles.card}>
           <TextInput
@@ -49,15 +50,11 @@ export default function SettingScreen() {
           />
         </View>
 
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSave}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave} activeOpacity={0.7}>
           <Text style={styles.saveText}>Save Pengaturan</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

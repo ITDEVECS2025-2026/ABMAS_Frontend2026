@@ -117,7 +117,7 @@ export default function HistoryPemupukanPage() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
       <ScreenHeader title="History Pemupukan" />
 
       <ScrollView
@@ -441,6 +441,6 @@ export default function HistoryPemupukanPage() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }

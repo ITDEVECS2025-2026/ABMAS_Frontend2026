@@ -1,4 +1,3 @@
-
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -15,7 +14,7 @@ import {
   Text,
   View,
 } from "react-native";
-import MapView, { Marker, UrlTile } from "react-native-maps";
+import { WebView } from "react-native-webview";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import InputSensorIdCard from "@/components/form/InputSensorIdCard";
@@ -29,6 +28,49 @@ import { getTimeAgo } from "@/utils/gps";
 import { scale } from "@/utils/scale";
 
 const CARD_WIDTH = 336;
+
+// Generator Peta HTML OpenStreetMap (Leaflet)
+// Generator Peta HTML OpenStreetMap (Leaflet) yang 100% Gratis Tanpa API Key
+const generateMapHTML = (lat: number, lon: number) => `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <style>
+        body { padding: 0; margin: 0; background-color: transparent; }
+        #map { width: 100vw; height: 100vh; }
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <script>
+        var map = L.map('map', {
+          zoomControl: false,
+          attributionControl: false,
+          dragging: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false,
+          touchZoom: false
+        }).setView([${lat}, ${lon}], 15);
+
+        // Ganti ke OpenStreetMap standar agar tulisan API Key hilang
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19
+        }).addTo(map);
+
+        var icon = L.icon({
+          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41]
+        });
+        L.marker([${lat}, ${lon}], {icon: icon}).addTo(map);
+      </script>
+    </body>
+  </html>
+`;
 
 export default function MonitoringSensorPage() {
   const params = useLocalSearchParams<{
@@ -130,9 +172,6 @@ export default function MonitoringSensorPage() {
     !!sensor?.location &&
     sensor.location.latitude !== 0 &&
     sensor.location.longitude !== 0;
-
-  // Input ID hanya mengarahkan halaman ini ke ID sensor yang dipilih.
- 
 
   return (
     <SafeAreaView
@@ -502,37 +541,17 @@ export default function MonitoringSensorPage() {
                       borderTopColor: "#006134",
                       overflow: "hidden",
                       pointerEvents: "none",
+                      backgroundColor: "#f0f0f0", // Tambahan background abu-abu saat WebView loading
                     }}
                   >
-                    <MapView
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                      }}
-                      mapType="none"
-                      region={{
-                        latitude: sensor.location!.latitude,
-                        longitude: sensor.location!.longitude,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01,
-                      }}
+                    <WebView
+                      originWhitelist={['*']}
+                      source={{ html: generateMapHTML(sensor.location!.latitude, sensor.location!.longitude) }}
+                      style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
                       scrollEnabled={false}
-                      zoomEnabled={false}
-                      pitchEnabled={false}
-                      rotateEnabled={false}
-                    >
-                      <UrlTile
-                        urlTemplate="https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
-                        maximumZ={19}
-                      />
-
-                      <Marker
-                        coordinate={{
-                          latitude: sensor.location!.latitude,
-                          longitude: sensor.location!.longitude,
-                        }}
-                      />
-                    </MapView>
+                      showsHorizontalScrollIndicator={false}
+                      showsVerticalScrollIndicator={false}
+                    />
                   </View>
                 )}
               </View>
