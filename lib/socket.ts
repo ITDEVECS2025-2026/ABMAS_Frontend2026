@@ -1,3 +1,4 @@
+//D:\APLIKASI TETA\ABMAS_Frontend2026\lib\socket.ts
 import { io, Socket } from 'socket.io-client';
 import { LIVE_URL } from './config';
 

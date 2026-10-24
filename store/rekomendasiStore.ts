@@ -1,3 +1,4 @@
+//rekomendasistore
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -73,11 +74,11 @@ export const useRekomendasiStore = create<RekomendasiState>()(
           },
           ...(normalizedMetadata.idLahan
             ? {
-                rekomendasiByLahan: {
-                  ...state.rekomendasiByLahan,
-                  [String(normalizedMetadata.idLahan)]: saved,
-                },
-              }
+              rekomendasiByLahan: {
+                ...state.rekomendasiByLahan,
+                [String(normalizedMetadata.idLahan)]: saved,
+              },
+            }
             : {}),
         }));
       },
@@ -88,12 +89,31 @@ export const useRekomendasiStore = create<RekomendasiState>()(
       getRekomendasiByDeviceId: (deviceId) =>
         get().rekomendasiByDevice[String(deviceId)],
 
+
       hapusRekomendasiLahan: (idLahan) =>
         set((state) => {
-          const next = { ...state.rekomendasiByLahan };
-          delete next[String(idLahan)];
-          return { rekomendasiByLahan: next };
+          const key = String(idLahan);
+
+          const nextByLahan = { ...state.rekomendasiByLahan };
+          delete nextByLahan[key];
+
+          const nextByDevice = { ...state.rekomendasiByDevice };
+          const nextRekomendasi = { ...state.rekomendasi };
+
+          for (const [deviceId, saved] of Object.entries(nextByDevice)) {
+            if (String(saved.metadata?.idLahan) === key) {
+              delete nextByDevice[deviceId];
+              delete nextRekomendasi[deviceId];
+            }
+          }
+
+          return {
+            rekomendasiByLahan: nextByLahan,
+            rekomendasiByDevice: nextByDevice,
+            rekomendasi: nextRekomendasi,
+          };
         }),
+
     }),
     {
       name: "rekomendasi-storage",
@@ -110,22 +130,22 @@ export const useRekomendasiStore = create<RekomendasiState>()(
 
         const rekomendasi =
           oldState.rekomendasi &&
-          typeof oldState.rekomendasi === "object" &&
-          !Array.isArray(oldState.rekomendasi)
+            typeof oldState.rekomendasi === "object" &&
+            !Array.isArray(oldState.rekomendasi)
             ? (oldState.rekomendasi as Record<string, unknown>)
             : {};
 
         const rekomendasiByLahan =
           oldState.rekomendasiByLahan &&
-          typeof oldState.rekomendasiByLahan === "object" &&
-          !Array.isArray(oldState.rekomendasiByLahan)
+            typeof oldState.rekomendasiByLahan === "object" &&
+            !Array.isArray(oldState.rekomendasiByLahan)
             ? (oldState.rekomendasiByLahan as Record<string, SavedRecommendation>)
             : {};
 
         const rekomendasiByDevice =
           oldState.rekomendasiByDevice &&
-          typeof oldState.rekomendasiByDevice === "object" &&
-          !Array.isArray(oldState.rekomendasiByDevice)
+            typeof oldState.rekomendasiByDevice === "object" &&
+            !Array.isArray(oldState.rekomendasiByDevice)
             ? (oldState.rekomendasiByDevice as Record<string, SavedRecommendation>)
             : {};
 

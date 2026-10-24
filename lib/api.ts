@@ -1,4 +1,5 @@
 
+//D:\APLIKASI TETA\ABMAS_Frontend2026\lib\api.ts
 import { API_URL } from "./config";
 import { Sensor } from "../interfaces";
 import { mapNode } from "../utils/mapPayload";

@@ -1,5 +1,5 @@
 // app/(features)/(monitoring)/index.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, Image, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -11,6 +11,8 @@ import InputSensorIdCard from "../../../components/form/InputSensorIdCard";
 import SectionLabel from "../../../components/form/SectionLabel";
 import { scale } from "../../../utils/scale";
 import { useLahanStore } from "../../../store/lahanStore";
+import { useRecordingStore } from "@/store/recordingStore";
+
 
 const jagungIcon = require("../../../styles/assets/jagung icon.png");
 const padiIcon = require("../../../styles/assets/padi icon.png");
@@ -22,6 +24,19 @@ export default function MonitoringLahanTersimpanPage() {
 
   const idLahan = params.idLahan ? String(params.idLahan) : null;
   const dataLahanStore = idLahan ? getLahanById(idLahan) : null;
+
+  const recordingForLahan = useRecordingStore((state) =>
+    state.recordings.find(
+      (recording) =>
+        String(recording.id_lahan) === String(idLahan)
+    )
+  );
+
+  useEffect(() => {
+    if (!idLahan || !recordingForLahan?.device_id) return;
+
+    handleSubmitSensorId(String(recordingForLahan.device_id));
+  }, [idLahan, recordingForLahan?.device_id]);
 
   const namaLahan = dataLahanStore?.namaLahan || (params.namaLahan ? String(params.namaLahan) : "Lahan");
   const tanaman = dataLahanStore?.tanaman || (params.tanaman ? String(params.tanaman) : "PADI");
@@ -63,7 +78,7 @@ export default function MonitoringLahanTersimpanPage() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
       <ScreenHeader title={namaLahan} />
 
       <ScrollView
@@ -172,6 +187,6 @@ export default function MonitoringLahanTersimpanPage() {
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

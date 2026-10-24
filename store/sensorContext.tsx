@@ -62,16 +62,44 @@ const initialState: SensorState = {
   connected: false,
 };
 
-function upsertSensors(existing: Sensor[], incoming: Sensor[]): Sensor[] {
-  const byId = new Map(existing.map((s) => [s.id, s]));
+function upsertSensors(
+  existing: Sensor[],
+  incoming: Sensor[]
+): Sensor[] {
+  const byId = new Map(
+    existing.map((sensor) => [String(sensor.id), sensor])
+  );
+
   for (const next of incoming) {
-    const prev = byId.get(next.id);
-    byId.set(next.id, {
+    const id = String(next.id);
+    const prev = byId.get(id);
+
+    if (!prev) {
+      byId.set(id, next);
+      continue;
+    }
+
+    byId.set(id, {
+      ...prev,
       ...next,
-      fertilizationHistory: prev?.fertilizationHistory ?? next.fertilizationHistory,
-      location: next.location ?? prev?.location ?? null,
+
+      soilData: {
+        ...prev.soilData,
+        ...next.soilData,
+      },
+
+      status: {
+        ...prev.status,
+        ...next.status,
+      },
+
+      fertilizationHistory:
+        prev.fertilizationHistory ?? next.fertilizationHistory,
+
+      location: next.location ?? prev.location ?? null,
     });
   }
+
   return Array.from(byId.values());
 }
 
@@ -96,16 +124,16 @@ function sensorReducer(state: SensorState, action: Action): SensorState {
         sensors: state.sensors.map((s) =>
           s.id === action.sensorId
             ? {
-                ...s,
-                fertilizationHistory: [
-                  {
-                    id: Date.now().toString(),
-                    date: Date.now(),
-                    ...action.input,
-                  },
-                  ...s.fertilizationHistory,
-                ],
-              }
+              ...s,
+              fertilizationHistory: [
+                {
+                  id: Date.now().toString(),
+                  date: Date.now(),
+                  ...action.input,
+                },
+                ...s.fertilizationHistory,
+              ],
+            }
             : s,
         ),
       };
@@ -148,27 +176,77 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // 2. Sinkronisasi REST API & Live Socket
+  // 2. Sinkronisasi REST API & Live Socket
   useEffect(() => {
     let active = true;
+    let isFetching = false;
 
-    fetchInitialSensors()
-      .then((sensors) => {
-        if (active) dispatch({ type: "UPSERT_SENSORS", sensors });
-      })
-      .catch((err) => {
-        console.warn("Initial sensor fetch failed:", err.message);
-        // Tetap pakai DUMMY_SENSORS yang sudah ada di initialState
+    const refreshSensors = async () => {
+      // Hindari request bertumpuk
+      if (!active || isFetching) return;
+
+      isFetching = true;
+
+      try {
+        const sensors = await fetchInitialSensors();
+
+        if (active && sensors.length > 0) {
+          dispatch({
+            type: "UPSERT_SENSORS",
+            sensors,
+          });
+        }
+      } catch (error) {
+        console.warn(
+          "[POLLING] Gagal mengambil data sensor:",
+          error
+        );
+      } finally {
+        isFetching = false;
+      }
+    };
+
+    // Request pertama saat provider aktif
+    void refreshSensors();
+
+    // Request ulang setiap 5 detik
+    const pollingInterval = setInterval(() => {
+      void refreshSensors();
+    }, 5000);
+
+    // Tetap gunakan Socket.IO untuk pembaruan real-time
+    const socket = createLiveSocket();
+
+    socket.on("connect", () => {
+      console.log("[SOCKET] Terhubung");
+      dispatch({
+        type: "SET_CONNECTED",
+        connected: true,
       });
 
-    const socket = createLiveSocket();
-    socket.on("connect", () => dispatch({ type: "SET_CONNECTED", connected: true }));
-    socket.on("disconnect", () => dispatch({ type: "SET_CONNECTED", connected: false }));
+      void refreshSensors();
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.warn("[SOCKET] Terputus:", reason);
+      dispatch({
+        type: "SET_CONNECTED",
+        connected: false,
+      });
+    });
+
     socket.on("sensor_upload", (payload: SensorUpdatePayload) => {
-      dispatch({ type: "UPSERT_SENSORS", sensors: mapPayload(payload) });
+      console.log("[SOCKET] Data sensor diterima");
+
+      dispatch({
+        type: "UPSERT_SENSORS",
+        sensors: mapPayload(payload),
+      });
     });
 
     return () => {
       active = false;
+      clearInterval(pollingInterval);
       socket.removeAllListeners();
       socket.disconnect();
     };
@@ -204,7 +282,13 @@ export function SensorProvider({ children }: { children: React.ReactNode }) {
     [state.settings],
   );
 
-  const getSensorById = useCallback((id: string) => state.sensors.find((s) => s.id === id), [state.sensors]);
+  const getSensorById = useCallback(
+    (id: string) =>
+      state.sensors.find(
+        (sensor) => String(sensor.id) === String(id)
+      ),
+    [state.sensors]
+  );
 
   return (
     <SensorContext.Provider

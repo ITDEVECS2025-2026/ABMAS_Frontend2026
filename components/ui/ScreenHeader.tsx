@@ -3,6 +3,7 @@ import React from "react";
 import { Text, View, Pressable } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 interface ScreenHeaderProps {
@@ -30,6 +31,7 @@ export default function ScreenHeader({
   onBackPress,
 }: ScreenHeaderProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleBack = () => {
     if (onBackPress) {
@@ -40,14 +42,16 @@ export default function ScreenHeader({
   };
 
   return (
-    
     <LinearGradient
       colors={["#105C2E", "#8C6A09"]}
       start={{ x: 0, y: 0.5 }}
       end={{ x: 1, y: 0.5 }}
       style={{
         width: "100%",
-        height: 58.13,
+        // Tinggi dasar (58.13) ditambah tinggi status bar HP (insets.top)
+        height: 58.13 + insets.top,
+        // Padding atas juga disesuaikan agar teks dan tombol tidak tertutup status bar
+        paddingTop: insets.top,
         borderBottomLeftRadius: 25.458,
         borderBottomRightRadius: 25.458,
         flexDirection: "row",
@@ -61,6 +65,8 @@ export default function ScreenHeader({
         style={{
           position: "absolute",
           left: 20,
+          // Menyesuaikan posisi vertikal tombol agar tetap center secara proporsional dengan insets.top
+          top: insets.top + (58.13 - 29) / 2,
           shadowColor: "#000000",
           shadowOffset: { width: 0, height: 1.697 },
           shadowOpacity: 0.5,

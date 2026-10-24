@@ -25,7 +25,7 @@ import {
   Tag,
   Target,
 } from "lucide-react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+
 
 import SensorMetricCard from "@/components/sensor/SensorMetricCard";
 import { saveHarvestData } from "@/lib/api";
@@ -37,6 +37,7 @@ import { averageSensorReadings } from "@/utils/averageReadings";
 import { scale } from "@/utils/scale";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+
 const jagungIcon = require("@/styles/assets/jagung icon.png");
 const padiIcon = require("@/styles/assets/padi icon.png");
 
@@ -47,7 +48,7 @@ const VARIETAS_OPTIONS = [
 ];
 
 const LokasiSawah = ({ alamat, lat, lon }: { alamat: string; lat: string; lon: string }) => (
-  <SafeAreaView
+  <View
     style={{
       width: "100%",
       borderRadius: scale(6),
@@ -97,7 +98,7 @@ const LokasiSawah = ({ alamat, lat, lon }: { alamat: string; lat: string; lon: s
         ) : null}
       </View>
     </View>
-  </SafeAreaView>
+  </View>
 );
 
 export default function MonitoringLahanTersimpanPage() {
@@ -111,7 +112,7 @@ export default function MonitoringLahanTersimpanPage() {
 
   const dataLahanStore = idLahan
     ? (getLahanById ? (getLahanById(idLahan) || getLahanById(Number(idLahan))) : null) ||
-      lahanList.find((l: any) => String(l.id) === idLahan)
+    lahanList.find((l: any) => String(l.id) === idLahan)
     : null;
 
   const namaLahan = dataLahanStore?.namaLahan || (params.namaLahan ? String(params.namaLahan) : "Lahan");
@@ -145,6 +146,16 @@ export default function MonitoringLahanTersimpanPage() {
   const [inputHasilPanen, setInputHasilPanen] = useState("");
   const [isSavingPanen, setIsSavingPanen] = useState(false);
 
+  // Aksi pembersihan data lokal setelah panen berhasil disimpan.
+  // clearRecordingsByLahan harus tersedia di store/recordingStore.ts.
+  const clearRecordingsByLahan = useRecordingStore(
+    (s: any) => s.clearRecordingsByLahan
+  );
+  const hapusRekomendasiLahan = useRekomendasiStore(
+    (s: any) => s.hapusRekomendasiLahan
+  );
+  const resetHistory = useHistoryStore((s) => s.reset);
+
   const recordings = useRecordingStore((s: any) => s.recordings ?? []);
   const savedRecommendation = useRekomendasiStore((s: any) =>
     idLahan ? s.rekomendasiByLahan?.[String(idLahan)] : undefined
@@ -163,13 +174,6 @@ export default function MonitoringLahanTersimpanPage() {
   const metadataRekomendasi = savedRecommendation?.metadata;
   const [hasRekomendasi, setHasRekomendasi] = useState(false);
   const [showFormPupuk, setShowFormPupuk] = useState(false);
-
-  const [datePupuk, setDatePupuk] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [formattedDatePupuk, setFormattedDatePupuk] = useState("");
-
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedVarietas, setSelectedVarietas] = useState("");
 
   useEffect(() => {
     setHasRekomendasi(Boolean(savedRecommendation?.hasil));
@@ -191,27 +195,32 @@ export default function MonitoringLahanTersimpanPage() {
         hasilPanenAktual: hasil,
       } as any);
 
+      // Tutup modal setelah penyimpanan panen di server berhasil.
       setIsModalPanenVisible(false);
-      setPanen(String(idLahan), hasil);
+
+      // Bersihkan data lokal yang terkait dengan siklus tanam lama.
+      // Tidak ada data yang dihapus dari server.
+      if (idLahan) {
+        clearRecordingsByLahan?.(String(idLahan));
+        hapusRekomendasiLahan(String(idLahan));
+        resetHistory(String(idLahan));
+
+        // Simpan penanda panen kembali agar status "Telah dipanen"
+        // dan tombol "Tanam Lagi" tetap muncul.
+        setPanen(String(idLahan), hasil);
+      }
+
       setInputHasilPanen("");
 
-      Alert.alert("Berhasil", "Data hasil panen berhasil disimpan.");
+      Alert.alert(
+        "Berhasil",
+        "Data panen berhasil disimpan. Data lokal siklus tanam lama telah dibersihkan."
+      );
     } catch (error) {
       console.error("Gagal menyimpan hasil panen:", error);
       Alert.alert("Gagal menyimpan", "Data hasil panen belum berhasil disimpan.");
     } finally {
       setIsSavingPanen(false);
-    }
-  };
-
-  const onChangeDate = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setDatePupuk(selectedDate);
-      const day = String(selectedDate.getDate()).padStart(2, "0");
-      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
-      const year = selectedDate.getFullYear();
-      setFormattedDatePupuk(`${day}/${month}/${year}`);
     }
   };
 
@@ -283,54 +292,54 @@ export default function MonitoringLahanTersimpanPage() {
         </View>
       </Modal>
 
-        {/* HEADER & INFO LAHAN */}
-        <LinearGradient colors={["#1b5e20", "#4d6b13", "#767614"]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ width: "100%", paddingTop: scale(50), paddingBottom: scale(24), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24), alignItems: "center" }}>
-          <View style={{ flexDirection: "row", width: "100%", alignItems: "center", justifyContent: "center", marginBottom: scale(20), paddingHorizontal: scale(16) }}>
-            <Pressable onPress={() => router.back()} style={{ position: "absolute", left: scale(16), zIndex: 1 }}>
-              <ArrowLeft color="#FFFFFF" size={scale(24)} />
-            </Pressable>
-            <Text style={{ color: "#FFFFFF", fontSize: scale(20), fontFamily: "PoppinsBold" }}>
-              Data Lahan
-            </Text>
-          </View>
+      {/* HEADER & INFO LAHAN */}
+      <LinearGradient colors={["#1b5e20", "#4d6b13", "#767614"]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ width: "100%", paddingTop: scale(50), paddingBottom: scale(24), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24), alignItems: "center" }}>
+        <View style={{ flexDirection: "row", width: "100%", alignItems: "center", justifyContent: "center", marginBottom: scale(20), paddingHorizontal: scale(16) }}>
+          <Pressable onPress={() => router.back()} style={{ position: "absolute", left: scale(16), zIndex: 1 }}>
+            <ArrowLeft color="#FFFFFF" size={scale(24)} />
+          </Pressable>
+          <Text style={{ color: "#FFFFFF", fontSize: scale(20), fontFamily: "PoppinsBold" }}>
+            Data Lahan
+          </Text>
+        </View>
 
-          {/* CARD INFO LAHAN */}
-          <View style={{ width: scale(336), height: scale(120), borderRadius: scale(16), backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", paddingHorizontal: scale(18), elevation: 4 }}>
-            <Image source={tanamanIcon} style={{ width: scale(49.372), height: scale(64.666), resizeMode: "contain" }} />
-            <View style={{ flex: 1, marginLeft: scale(12) }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingRight: scale(8) }}>
-                <Text style={{ color: "#1A202C", fontFamily: "PoppinsSemiBold", fontSize: scale(17), flex: 1 }} numberOfLines={1}>
-                  {namaLahan}
-                </Text>
-                <Text style={{ color: "#000000", fontFamily: "PoppinsMedium", fontSize: scale(11), marginLeft: scale(6), marginTop: scale(4) }}>
-                  {tanggalTanam}
-                </Text>
-              </View>
+        {/* CARD INFO LAHAN */}
+        <View style={{ width: scale(336), height: scale(120), borderRadius: scale(16), backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", paddingHorizontal: scale(18), elevation: 4 }}>
+          <Image source={tanamanIcon} style={{ width: scale(49.372), height: scale(64.666), resizeMode: "contain" }} />
+          <View style={{ flex: 1, marginLeft: scale(12) }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingRight: scale(8) }}>
+              <Text style={{ color: "#1A202C", fontFamily: "PoppinsSemiBold", fontSize: scale(17), flex: 1 }} numberOfLines={1}>
+                {namaLahan}
+              </Text>
+              <Text style={{ color: "#000000", fontFamily: "PoppinsMedium", fontSize: scale(11), marginLeft: scale(6), marginTop: scale(4) }}>
+                {tanggalTanam}
+              </Text>
+            </View>
 
-              <View style={{ width: scale(128.564), height: scale(20), borderRadius: scale(5.117), marginBottom: scale(6), overflow: "hidden" }}>
-                <LinearGradient colors={["#187245", "#58C15C"]} start={{ x: 0, y: 0 }} end={{ x: 1.3, y: 0 }} style={{ width: "100%", height: "100%", justifyContent: "center", alignItems: "center" }}>
-                  <Text style={{ color: "#FFFFFF", fontFamily: "PoppinsMedium", fontSize: scale(12.5) }}>
-                    {tanamanLabel}
-                  </Text>
-                </LinearGradient>
-              </View>
-
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: scale(-3) }}>
-                <Ruler size={scale(15)} color="#1A202C" />
-                <Text style={{ color: "#1A202C", fontFamily: "PoppinsSemiBold", fontSize: scale(13), marginLeft: scale(6) }}>
-                  Luas Lahan : <Text style={{ fontFamily: "PoppinsMedium" }}>{luasLahan} Hektar</Text>
+            <View style={{ width: scale(128.564), height: scale(20), borderRadius: scale(5.117), marginBottom: scale(6), overflow: "hidden" }}>
+              <LinearGradient colors={["#187245", "#58C15C"]} start={{ x: 0, y: 0 }} end={{ x: 1.3, y: 0 }} style={{ width: "100%", height: "100%", justifyContent: "center", alignItems: "center" }}>
+                <Text style={{ color: "#FFFFFF", fontFamily: "PoppinsMedium", fontSize: scale(12.5) }}>
+                  {tanamanLabel}
                 </Text>
-              </View>
+              </LinearGradient>
+            </View>
 
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Target size={scale(13)} color="#000000" />
-                <Text style={{ color: "#000000", fontFamily: "PoppinsSemiBold", fontSize: scale(13), marginLeft: scale(6) }}>
-                  Target Panen : <Text style={{ fontFamily: "PoppinsMedium" }}>{targetPanen} ton/Hektar</Text>
-                </Text>
-              </View>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: scale(-3) }}>
+              <Ruler size={scale(15)} color="#1A202C" />
+              <Text style={{ color: "#1A202C", fontFamily: "PoppinsSemiBold", fontSize: scale(13), marginLeft: scale(6) }}>
+                Luas Lahan : <Text style={{ fontFamily: "PoppinsMedium" }}>{luasLahan} Hektar</Text>
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Target size={scale(13)} color="#000000" />
+              <Text style={{ color: "#000000", fontFamily: "PoppinsSemiBold", fontSize: scale(13), marginLeft: scale(6) }}>
+                Target Panen : <Text style={{ fontFamily: "PoppinsMedium" }}>{targetPanen} ton/Hektar</Text>
+              </Text>
             </View>
           </View>
-        </LinearGradient>
+        </View>
+      </LinearGradient>
 
 
       <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: scale(40) }} showsVerticalScrollIndicator={false}>
@@ -354,12 +363,30 @@ export default function MonitoringLahanTersimpanPage() {
                 !showFormPupuk ? (
                   <View style={{ alignItems: "center", marginTop: scale(30) }}>
                     <Text style={{ fontFamily: "PoppinsMedium", fontSize: scale(14), color: "#1A202C", marginBottom: scale(16), textAlign: "center" }}>
-                      Anda belum melakukan rekomendasi pemupukan
+                      Anda belum mengambil data kondisi tanah
                     </Text>
-                    <Pressable onPress={() => setShowFormPupuk(true)} style={{ width: scale(200) }}>
+                    <Pressable
+                      onPress={() => {
+                        // Jika belum pernah merekam sensor untuk lahan ini,
+                        // kembali ke halaman input ID sensor dengan ID lahan yang sama.
+                        if (!recordingForLahan?.localId) {
+                          router.push({
+                            pathname: "/(features)/(monitoring)",
+                            params: {
+                              idLahan: String(idLahan),
+                            },
+                          } as any);
+                          return;
+                        }
+
+                        // Jika sudah ada rekaman, lanjutkan ke form pupuk.
+                        setShowFormPupuk(true);
+                      }}
+                      style={{ width: scale(200) }}
+                    >
                       <LinearGradient colors={["#105C2E", "#8C6A09"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ borderRadius: scale(12), paddingVertical: scale(12), alignItems: "center" }}>
                         <Text style={{ color: "#FFFFFF", fontFamily: "PoppinsBold", fontSize: scale(15) }}>
-                          Isi Data Pupuk
+                          Ambil Data
                         </Text>
                       </LinearGradient>
                     </Pressable>
@@ -368,64 +395,52 @@ export default function MonitoringLahanTersimpanPage() {
                   <View style={{ width: "100%" }}>
                     <RenderGridKondisiTanah />
 
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: scale(6), marginBottom: scale(8) }}>
-                      <Radio size={scale(18)} color="#1A202C" />
-                      <Text style={{ fontFamily: "PoppinsBold", fontSize: scale(15), color: "#1A202C" }}>
-                        Tanggal Mulai Pemupukan
-                      </Text>
-                    </View>
-                    <Pressable onPress={() => setShowDatePicker(true)} style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#CBD5E1", borderRadius: scale(8), paddingHorizontal: scale(12), height: scale(45), marginBottom: scale(20), backgroundColor: "#FFFFFF" }}>
-                      <Text style={{ flex: 1, fontFamily: "PoppinsRegular", fontSize: scale(14), color: formattedDatePupuk ? "#1A202C" : "#94A3B8" }}>
-                        {formattedDatePupuk || "dd/mm/yyyy"}
-                      </Text>
-                      <Calendar size={scale(20)} color="#1A202C" />
-                    </Pressable>
+<LokasiSawah alamat={alamat} lat={lat} lon={lon} />
 
-                    {showDatePicker && (
-                      <DateTimePicker value={datePupuk} mode="date" display="default" onChange={onChangeDate} />
-                    )}
+<Pressable
+  style={{
+    marginTop: scale(24),
+    marginBottom: scale(20),
+  }}
+  onPress={() => {
+    if (!recordingForLahan?.localId) {
+      Alert.alert(
+        "Data rekaman belum tersedia",
+        "Lakukan rekaman sensor untuk lahan ini terlebih dahulu."
+      );
+      return;
+    }
 
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: scale(6), marginBottom: scale(8) }}>
-                      <Tag size={scale(18)} color="#1A202C" />
-                      <Text style={{ fontFamily: "PoppinsBold", fontSize: scale(15), color: "#1A202C" }}>
-                        Pilih Varietas
-                      </Text>
-                    </View>
-
-                    <View style={{ zIndex: 10, marginBottom: scale(24) }}>
-                      <Pressable onPress={() => setIsDropdownOpen(!isDropdownOpen)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#CBD5E1", borderRadius: scale(8), paddingHorizontal: scale(12), height: scale(45), backgroundColor: "#FFFFFF" }}>
-                        <Text style={{ fontFamily: "PoppinsMedium", fontSize: scale(13), color: selectedVarietas ? "#1A202C" : "#94A3B8" }}>
-                          {selectedVarietas || "Klik Untuk Memilih"}
-                        </Text>
-                        <ChevronDown size={scale(20)} color="#1A202C" />
-                      </Pressable>
-                      {isDropdownOpen && (
-                        <View style={{ position: "absolute", top: scale(50), left: 0, right: 0, backgroundColor: "#FFFFFF", borderRadius: scale(8), borderWidth: 1, borderColor: "#CBD5E1", elevation: 5, paddingVertical: scale(4) }}>
-                          {VARIETAS_OPTIONS.map((item, index) => (
-                            <Pressable key={index} onPress={() => { setSelectedVarietas(item); setIsDropdownOpen(false); }} style={{ paddingVertical: scale(10), paddingHorizontal: scale(12), borderBottomWidth: index !== VARIETAS_OPTIONS.length - 1 ? 1 : 0, borderBottomColor: "#F1F5F9" }}>
-                              <Text style={{ fontFamily: "PoppinsMedium", fontSize: scale(13), color: "#1A202C" }}>
-                                {item}
-                              </Text>
-                            </Pressable>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-
-                    <LokasiSawah alamat={alamat} lat={lat} lon={lon} />
-                    <Pressable style={{ marginTop: scale(24), marginBottom: scale(20) }} onPress={() => {
-                        if (!recordingForLahan?.localId) {
-                          Alert.alert("Data rekaman belum tersedia", "Lakukan rekaman sensor untuk lahan ini terlebih dahulu.");
-                          return;
-                        }
-                        router.push({ pathname: "/(features)/(rekomendasi)", params: { localId: String(recordingForLahan.localId), idLahan: String(idLahan) } } as any);
-                      }}>
-                      <LinearGradient colors={["#105C2E", "#588157"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ borderRadius: scale(12), paddingVertical: scale(14), alignItems: "center" }}>
-                        <Text style={{ color: "#FFFFFF", fontFamily: "PoppinsBold", fontSize: scale(16) }}>
-                          Rekomendasi
-                        </Text>
-                      </LinearGradient>
-                    </Pressable>
+    router.push({
+      pathname: "/(features)/(rekomendasi)",
+      params: {
+        localId: String(recordingForLahan.localId),
+        idLahan: String(idLahan),
+      },
+    } as any);
+  }}
+>
+  <LinearGradient
+    colors={["#105C2E", "#588157"]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 0 }}
+    style={{
+      borderRadius: scale(12),
+      paddingVertical: scale(14),
+      alignItems: "center",
+    }}
+  >
+    <Text
+      style={{
+        color: "#FFFFFF",
+        fontFamily: "PoppinsBold",
+        fontSize: scale(16),
+      }}
+    >
+      Rekomendasi
+    </Text>
+  </LinearGradient>
+</Pressable>
                   </View>
                 )
               ) : (
@@ -447,14 +462,14 @@ export default function MonitoringLahanTersimpanPage() {
                   <View style={{ backgroundColor: "#105C2E", borderRadius: scale(10), padding: scale(12), flexDirection: "row", justifyContent: "space-between", marginBottom: scale(24) }}>
                     {(metadataRekomendasi?.jenisPupuk === "majemuk"
                       ? [
-                          { label: "Nitrogen", value: "Urea" },
-                          { label: "Pupuk Majemuk", value: `NPK ${metadataRekomendasi?.rasioNPK ?? "15:15:15"}` },
-                        ]
+                        { label: "Nitrogen", value: "Urea" },
+                        { label: "Pupuk Majemuk", value: `NPK ${metadataRekomendasi?.rasioNPK ?? "15:15:15"}` },
+                      ]
                       : [
-                          { label: "Nitrogen", value: "Urea" },
-                          { label: "Kalium", value: "KCL" },
-                          { label: "Fosfat", value: "SP-36" },
-                        ]
+                        { label: "Nitrogen", value: "Urea" },
+                        { label: "Kalium", value: "KCL" },
+                        { label: "Fosfat", value: "SP-36" },
+                      ]
                     ).map((item: any) => (
                       <View key={item.label} style={{ flex: 1, marginHorizontal: scale(3), borderRadius: scale(6), overflow: "hidden" }}>
                         <View style={{ backgroundColor: "#4CAF50", paddingVertical: scale(6), alignItems: "center" }}>
@@ -511,7 +526,7 @@ export default function MonitoringLahanTersimpanPage() {
                     );
                   })}
 
-                  
+
 
                   <LokasiSawah alamat={alamat} lat={lat} lon={lon} />
 

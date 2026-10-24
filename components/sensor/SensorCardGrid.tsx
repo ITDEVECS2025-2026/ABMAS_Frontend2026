@@ -1,4 +1,5 @@
 
+//D:\APLIKASI TETA\ABMAS_Frontend2026\components\sensor\SensorCardGrid.tsx
 //LAYOUT UNTUK METRIC CARD DAN YANG INI YANG DI IMPORT KE PAGE YANG DIBUTUHKAN
 import React from "react";
 import { Text, View } from "react-native";
@@ -18,9 +19,10 @@ export default function SensorCard({
   const { sensors, connected } = useSensorStore();
 
   // Prioritaskan data hasil refresh dari halaman detail
-  const sensor =
-    sensorData ??
-    sensors.find((item) => String(item.id) === String(sensorId));
+  const sensor = sensors.find(
+    (item) => String(item.id) === String(sensorId)
+  ) ?? sensorData;
+
 
   // Jika sensor belum ditemukan
   if (!sensor) {

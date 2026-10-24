@@ -222,7 +222,7 @@ export default function RekomendasiScreen() {
   // =====================================================
   if (!payload || !averageSensor || !hasil) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <View style={styles.safe}>
         <ScreenHeaderFallback
           title="Rekomendasi"
           onBack={() => router.replace("/(main)/history")}
@@ -230,7 +230,7 @@ export default function RekomendasiScreen() {
         <Text style={styles.emptyText}>
           Data rekaman tidak ditemukan atau belum diproses.
         </Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
