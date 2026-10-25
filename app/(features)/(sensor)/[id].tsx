@@ -1,4 +1,4 @@
-//(feature)/(sensor)/[id].tsx
+//(features)/(sensor)/[id].tsx
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -31,11 +31,9 @@ import { useLahanStore } from "@/store/lahanStore";
 import { useSensorStore } from "@/store/sensorContext";
 import { getTimeAgo } from "@/utils/gps";
 import { scale } from "@/utils/scale";
-import { averageSensorReadings } from '@/utils/averageReadings';
+import { averageSensorReadings } from "@/utils/averageReadings";
 import type { RecordingPayload } from "@/lib/recordingService";
 
-
-// GANTI PATH INI SESUAI LOKASI FILE ZUSTAND ANDA:
 import { useRecordingStore, type RecordedSnapshot } from "@/store/recordingStore";
 
 const CARD_WIDTH = 336;
@@ -43,8 +41,6 @@ const CARD_WIDTH = 336;
 type AmbilDataState = "idle" | "confirm" | "loading" | "success" | "error";
 type Phase = "ambil" | "kirim";
 
-// Generator Peta HTML OpenStreetMap (Leaflet)
-// Generator Peta HTML OpenStreetMap (Leaflet) yang 100% Gratis Tanpa API Key
 const generateMapHTML = (lat: number, lon: number) => `
   <!DOCTYPE html>
   <html>
@@ -69,7 +65,6 @@ const generateMapHTML = (lat: number, lon: number) => `
           touchZoom: false
         }).setView([${lat}, ${lon}], 15);
 
-        // Ganti ke OpenStreetMap standar agar tulisan API Key hilang
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19
         }).addTo(map);
@@ -91,8 +86,11 @@ export default function SensorDetailScreen() {
   const id = params.id as string;
   const idLahan = params.idLahan ? String(params.idLahan) : null;
   const router = useRouter();
-  const recordings = useRecordingStore((state) => state.recordings ?? []);
 
+  // PENYELEKSIAN LOGIKA: Cek apakah halaman dibuka dalam konteks Lahan atau Monitoring Biasa
+  const isKonteksLahan = Boolean(idLahan);
+
+  const recordings = useRecordingStore((state) => state.recordings ?? []);
   const saveSnapshot = useRecordingStore((state) => state.saveSnapshot);
   const markSubmitted = useRecordingStore((state) => state.markSubmitted);
 
@@ -115,29 +113,25 @@ export default function SensorDetailScreen() {
   const sensor: Sensor | undefined =
     refreshedSensor && refreshedSensor.lastUpdated > (storeSensor?.lastUpdated ?? 0)
       ? {
-        ...refreshedSensor,
-        lastReadingId: refreshedSensor.lastReadingId ?? storeSensor?.lastReadingId,
-      }
+          ...refreshedSensor,
+          lastReadingId: refreshedSensor.lastReadingId ?? storeSensor?.lastReadingId,
+        }
       : storeSensor;
 
-  const [ambilDataState, setAmbilDataState] =
-    useState<AmbilDataState>("idle");
-
+  const [ambilDataState, setAmbilDataState] = useState<AmbilDataState>("idle");
   const [phase, setPhase] = useState<Phase>("ambil");
 
   const [idRecording, setIdRecording] = useState<number[]>(
     existingRecording?.id_recording ??
-    (existingRecording?.snapshots ?? []).map((_, index) => index)
+      (existingRecording?.snapshots ?? []).map((_, index) => index)
   );
 
   const [errorMessage, setErrorMessage] = useState("");
 
   const lastRecordedTimestampRef = useRef<number | null>(null);
-
   const snapshotsRef = useRef<RecordedSnapshot[]>(
     existingRecording?.snapshots ?? []
   );
-
   const savedLocalIdRef = useRef<string | null>(
     existingRecording?.localId ?? null
   );
@@ -145,14 +139,11 @@ export default function SensorDetailScreen() {
   useEffect(() => {
     if (!existingRecording) return;
 
-    // Pulihkan semua rekaman sebelumnya untuk lahan dan sensor ini.
     snapshotsRef.current = existingRecording.snapshots ?? [];
-
     setIdRecording(
       existingRecording.id_recording ??
-      (existingRecording.snapshots ?? []).map((_, index) => index)
+        (existingRecording.snapshots ?? []).map((_, index) => index)
     );
-
     savedLocalIdRef.current = existingRecording.localId;
   }, [existingRecording]);
 
@@ -202,10 +193,8 @@ export default function SensorDetailScreen() {
     setErrorMessage("");
 
     try {
-      // Beri jeda untuk menampilkan status loading
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Cegah pembacaan sensor yang sama direkam berulang kali
       if (lastRecordedTimestampRef.current === sensor.lastUpdated) {
         setErrorMessage(
           "Belum ada pembaruan data baru dari sensor. Tunggu beberapa saat."
@@ -214,7 +203,6 @@ export default function SensorDetailScreen() {
         return;
       }
 
-      // Pastikan data sensor tersedia
       const soilData = (sensor as any).soilData;
 
       if (!soilData) {
@@ -223,7 +211,6 @@ export default function SensorDetailScreen() {
         return;
       }
 
-      // Buat snapshot dengan struktur yang sesuai dengan RecordedSnapshot
       const snapshot: RecordedSnapshot = {
         takenAt: new Date().toISOString(),
         N: Number(soilData.N ?? 0),
@@ -231,15 +218,10 @@ export default function SensorDetailScreen() {
         K: Number(soilData.K ?? 0),
         EC: Number(soilData.EC ?? 0),
         pH: Number(soilData.pH ?? 0),
-        temperature: Number(
-          soilData.temperature ?? soilData.suhu ?? 0
-        ),
-        humidity: Number(
-          soilData.humidity ?? soilData.kelembapan ?? 0
-        ),
+        temperature: Number(soilData.temperature ?? soilData.suhu ?? 0),
+        humidity: Number(soilData.humidity ?? soilData.kelembapan ?? 0),
       };
 
-      // Pastikan nilai yang akan disimpan valid
       const sensorValues = [
         snapshot.N,
         snapshot.P,
@@ -256,43 +238,25 @@ export default function SensorDetailScreen() {
         return;
       }
 
-      // Nomor pembacaan berikutnya
       const nextId = idRecording.length;
-
-      // Simpan ID pembacaan ke state halaman
       setIdRecording((prev) => [...prev, nextId]);
-
-      // Simpan snapshot ke ref agar dapat digunakan untuk menghitung rata-rata
       snapshotsRef.current.push(snapshot);
 
-      /*
-       * Simpan snapshot langsung ke Zustand.
-       * Data tidak perlu menunggu pengguna menekan tombol Selesai
-       * atau melakukan rekomendasi pupuk.
-       *
-       * Pastikan idLahan, id, dan payload sesuai dengan variabel
-       * yang digunakan pada halaman sensor kamu.
-       */
       const lahanId = Number(idLahan);
 
       if (!Number.isFinite(lahanId) || lahanId <= 0) {
-        // Kembalikan perubahan lokal jika identitas lahan tidak valid.
         snapshotsRef.current.pop();
         setIdRecording((prev) => prev.slice(0, -1));
-
         setErrorMessage("ID lahan tidak valid. Data belum dapat disimpan.");
         setAmbilDataState("error");
         return;
       }
 
-      const lahan = useLahanStore
-        .getState()
-        .getLahanById(String(idLahan));
+      const lahan = useLahanStore.getState().getLahanById(String(idLahan));
 
       if (!lahan) {
         snapshotsRef.current.pop();
         setIdRecording((prev) => prev.slice(0, -1));
-
         setErrorMessage("Data lahan tidak ditemukan. Data belum dapat disimpan.");
         setAmbilDataState("error");
         return;
@@ -310,28 +274,17 @@ export default function SensorDetailScreen() {
         id_recording: [...idRecording, nextId],
       };
 
-      // Simpan ke Zustand dan dapatkan ID sesi lokal.
-      const localId = useRecordingStore
-        .getState()
-        .saveSnapshot(recordingPayload, snapshot);
-
-      // Simpan ID sesi agar halaman berikutnya menggunakan sesi yang sama.
+      const localId = useRecordingStore.getState().saveSnapshot(recordingPayload, snapshot);
       savedLocalIdRef.current = localId;
-
-      // Tandai timestamp setelah snapshot berhasil disimpan.
       lastRecordedTimestampRef.current = sensor.lastUpdated;
 
       setAmbilDataState("success");
     } catch (error) {
       console.error("Gagal mengambil dan menyimpan data sensor:", error);
-
-      setErrorMessage(
-        "Terjadi kesalahan saat mengambil atau menyimpan data sensor."
-      );
+      setErrorMessage("Terjadi kesalahan saat mengambil atau menyimpan data sensor.");
       setAmbilDataState("error");
     }
   }
-
 
   async function handleKirim() {
     if (!hasDataTaken) return;
@@ -354,7 +307,6 @@ export default function SensorDetailScreen() {
 
     try {
       const averageReadings = averageSensorReadings(snapshotsRef.current);
-      console.log("📊 Rata-rata pembacaan sensor:", averageReadings);
 
       const apiPayload = {
         id_lahan: idLahanAngka,
@@ -368,11 +320,6 @@ export default function SensorDetailScreen() {
         id_recording: idRecording,
       };
 
-      const localPayload = {
-        ...apiPayload,
-        averageSensor: averageReadings,
-      };
-
       await sendRecording(apiPayload);
       const localId = savedLocalIdRef.current;
 
@@ -382,7 +329,6 @@ export default function SensorDetailScreen() {
 
       markSubmitted(localId);
       savedLocalIdRef.current = localId;
-      console.log("✅ Berhasil simpan ke Zustand & API. LocalId:", localId);
 
       setAmbilDataState("success");
     } catch (error) {
@@ -406,7 +352,7 @@ export default function SensorDetailScreen() {
 
       router.replace({
         pathname: "/(features)/(rekomendasi)",
-        params: { localId: finalLocalId }
+        params: { localId: finalLocalId },
       });
     }
   }
@@ -423,7 +369,7 @@ export default function SensorDetailScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ================= Kondisi Tanah ================= */}
+        {/* Kondisi Tanah */}
         <View style={{ width: scale(CARD_WIDTH), marginTop: scale(16), alignItems: "center" }}>
           <View style={{ flexDirection: "row", gap: scale(8) }}>
             <Leaf size={scale(28.254)} color="#232323" />
@@ -502,125 +448,127 @@ export default function SensorDetailScreen() {
           </Text>
         ) : null}
 
-        {/* ================= Ambil Data ================= */}
-        <View style={{ alignItems: "center", width: "100%", paddingHorizontal: scale(15) }}>
-          <LinearGradient
-            colors={["#105C2E", "#8C6A09"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1.6, y: 1 }}
-            style={{
-              width: "100%",
-              height: scale(70),
-              borderTopLeftRadius: scale(16.868),
-              borderTopRightRadius: scale(16.868),
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: scale(8) }}>
-              <Camera size={scale(23)} color="#FFFFFF" style={{ marginTop: scale(-4) }} />
+        {/* ================= Ambil Data (Hanya Tampil Jika Akses Lewat Lahan) ================= */}
+        {isKonteksLahan && (
+          <View style={{ alignItems: "center", width: "100%", paddingHorizontal: scale(15) }}>
+            <LinearGradient
+              colors={["#105C2E", "#8C6A09"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1.6, y: 1 }}
+              style={{
+                width: "100%",
+                height: scale(70),
+                borderTopLeftRadius: scale(16.868),
+                borderTopRightRadius: scale(16.868),
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: scale(8) }}>
+                <Camera size={scale(23)} color="#FFFFFF" style={{ marginTop: scale(-4) }} />
+                <Text
+                  style={{
+                    color: "#FFFFFF",
+                    fontFamily: "PoppinsBold",
+                    fontSize: scale(21.085),
+                  }}
+                >
+                  Ambil Data
+                </Text>
+              </View>
               <Text
                 style={{
                   color: "#FFFFFF",
-                  fontFamily: "PoppinsBold",
-                  fontSize: scale(21.085),
+                  fontFamily: "PoppinsMedium",
+                  fontSize: scale(12.651),
+                  marginTop: scale(-7),
                 }}
               >
-                Ambil Data
+                Pembaruan terakhir : {getTimeAgo(sensor.lastUpdated)}
               </Text>
-            </View>
-            <Text
-              style={{
-                color: "#FFFFFF",
-                fontFamily: "PoppinsMedium",
-                fontSize: scale(12.651),
-                marginTop: scale(-7),
-              }}
-            >
-              Pembaruan terakhir : {getTimeAgo(sensor.lastUpdated)}
-            </Text>
-          </LinearGradient>
+            </LinearGradient>
 
-          <View
-            style={{
-              width: "100%",
-              paddingVertical: scale(15),
-              paddingHorizontal: scale(15),
-              borderBottomLeftRadius: scale(8.434),
-              borderBottomRightRadius: scale(8.434),
-              backgroundColor: "#BDEBBB",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: scale(12),
-            }}
-          >
-            <Pressable
-              onPress={() => {
-                setPhase("ambil");
-                setAmbilDataState("confirm");
-              }}
+            <View
               style={{
-                width: scale(310),
-                height: scale(53.134),
-                borderRadius: scale(21.085),
-                borderWidth: scale(2.108),
-                borderColor: "#1E1E1E",
-                backgroundColor: "#FFFFFF",
-                flexDirection: "row",
-                alignItems: "center",
+                width: "100%",
+                paddingVertical: scale(15),
+                paddingHorizontal: scale(15),
+                borderBottomLeftRadius: scale(8.434),
+                borderBottomRightRadius: scale(8.434),
+                backgroundColor: "#BDEBBB",
                 justifyContent: "center",
-                gap: scale(8),
+                alignItems: "center",
+                gap: scale(12),
               }}
             >
-              <Camera size={scale(24.459)} color="#105C2E" />
+              <Pressable
+                onPress={() => {
+                  setPhase("ambil");
+                  setAmbilDataState("confirm");
+                }}
+                style={{
+                  width: scale(310),
+                  height: scale(53.134),
+                  borderRadius: scale(21.085),
+                  borderWidth: scale(2.108),
+                  borderColor: "#1E1E1E",
+                  backgroundColor: "#FFFFFF",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: scale(8),
+                }}
+              >
+                <Camera size={scale(24.459)} color="#105C2E" />
+                <Text
+                  style={{
+                    color: "#105C2E",
+                    fontFamily: "PoppinsBold",
+                    fontSize: scale(21.085),
+                  }}
+                >
+                  Ambil Data
+                </Text>
+              </Pressable>
+
               <Text
                 style={{
                   color: "#105C2E",
-                  fontFamily: "PoppinsBold",
-                  fontSize: scale(21.085),
+                  fontFamily: "PoppinsMedium",
+                  fontSize: scale(12.5),
+                  marginTop: scale(-4),
                 }}
               >
-                Ambil Data
+                Sudah ambil data : {idRecording.length} kali
               </Text>
-            </Pressable>
 
-            <Text
-              style={{
-                color: "#105C2E",
-                fontFamily: "PoppinsMedium",
-                fontSize: scale(12.5),
-                marginTop: scale(-4),
-              }}
-            >
-              Sudah ambil data : {idRecording.length} kali
-            </Text>
-
-            <Pressable
-              onPress={handleKirim}
-              disabled={!hasDataTaken}
-              style={{
-                width: scale(310),
-                height: scale(44),
-                borderRadius: scale(16),
-                backgroundColor: hasDataTaken ? "#105C2E" : "#A9CBAA",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <Text
+              <Pressable
+                onPress={handleKirim}
+                disabled={!hasDataTaken}
                 style={{
-                  color: "#FFFFFF",
-                  fontFamily: "PoppinsBold",
-                  fontSize: scale(16),
+                  width: scale(310),
+                  height: scale(44),
+                  borderRadius: scale(16),
+                  backgroundColor: hasDataTaken ? "#105C2E" : "#A9CBAA",
+                  justifyContent: "center",
+                  alignItems: "center",
                 }}
               >
-                Selesai
-              </Text>
-            </Pressable>
+                <Text
+                  style={{
+                    color: "#FFFFFF",
+                    fontFamily: "PoppinsBold",
+                    fontSize: scale(16),
+                  }}
+                >
+                  Selesai
+                </Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* ================= Status Sensor ================= */}
+        {/* Status Sensor */}
         <View style={{ marginTop: scale(24) }}>
           <StatusSensorCard
             battery={sensor.status.battery}
@@ -631,7 +579,7 @@ export default function SensorDetailScreen() {
           />
         </View>
 
-        {/* ================= Lokasi Sawah ================= */}
+        {/* Lokasi Sawah */}
         <View style={{ marginTop: scale(24), marginBottom: scale(20), width: scale(CARD_WIDTH) }}>
           <View
             style={{
@@ -727,11 +675,11 @@ export default function SensorDetailScreen() {
                   borderTopColor: "#006134",
                   overflow: "hidden",
                   pointerEvents: "none",
-                  backgroundColor: "#f0f0f0", // Tambahan background abu-abu saat WebView loading
+                  backgroundColor: "#f0f0f0",
                 }}
               >
                 <WebView
-                  originWhitelist={['*']}
+                  originWhitelist={["*"]}
                   source={{ html: generateMapHTML(sensor.location!.latitude, sensor.location!.longitude) }}
                   style={{ width: "100%", height: "100%", backgroundColor: "transparent" }}
                   scrollEnabled={false}
@@ -744,7 +692,7 @@ export default function SensorDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* ================= Modal Ambil Data / Kirim Data ================= */}
+      {/* Modal Ambil Data */}
       <Modal
         visible={ambilDataState !== "idle"}
         transparent

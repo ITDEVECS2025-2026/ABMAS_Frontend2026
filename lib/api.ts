@@ -156,3 +156,22 @@ export async function fetchTelemetryPayload() {
 
   return payload;
 }
+export async function deleteHistory(id: string | number) {
+  const SECRET_KEY = process.env.EXPO_PUBLIC_API_KEY;
+
+  const response = await fetch(`${API_URL}/history/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": SECRET_KEY || "",
+    },
+  });
+
+  // 404 = data tidak ada di server (mis. lahan belum pernah dipanen),
+  // anggap berhasil supaya data lokal tetap bisa dibersihkan.
+  if (!response.ok && response.status !== 404) {
+    const errorBody = await response.text();
+    console.error("DETAIL ERROR DARI SERVER:", errorBody);
+    throw new Error(`HTTP Error ${response.status}: ${errorBody}`);
+  }
+}

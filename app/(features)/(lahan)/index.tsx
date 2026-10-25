@@ -285,7 +285,7 @@ export default function LahanBaruPage() {
               keyboardType="numeric"
               style={{ flex: 1, color: "#1E1E1E", fontFamily: "PoppinsRegular", fontStyle: "italic", fontSize: scale(16), includeFontPadding: false }}
             />
-            <Text style={{ color: "#1E1E1E", fontFamily: "PoppinsRegular", fontStyle: "italic", fontSize: scale(16) }}>Ton/Hektar</Text>
+            <Text style={{ color: "#1E1E1E", fontFamily: "PoppinsRegular", fontStyle: "italic", fontSize: scale(16) }}>Kg/Hektar</Text>
           </View>
         </View>
 
