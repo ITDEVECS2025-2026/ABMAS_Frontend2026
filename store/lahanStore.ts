@@ -29,6 +29,7 @@ export interface LahanState {
   lahanList: Lahan[];
   addLahan: (lahan: Omit<Lahan, "id" | "createdAt">) => string;
   getLahanById: (id: string) => Lahan | undefined;
+  removeLahan: (id: string) => void;
 
   tempAlamat: string;
   setTempAlamat: (alamat: string) => void;
@@ -48,32 +49,47 @@ export const useLahanStore = create<LahanState>()(
       addLahan: (lahanData) => {
         const newLahan: Lahan = {
           ...lahanData,
-          // ID berupa angka dalam detik, supaya Number(id) valid dan masih muat di kolom Int 32 bit
           id: String(Math.floor(Date.now() / 1000)),
           createdAt: new Date().toISOString(),
         };
 
         set((state) => ({
-          lahanList: [newLahan, ...state.lahanList],
+          lahanList: [newLahan, ...(state.lahanList || [])],
         }));
 
         return newLahan.id;
       },
 
       getLahanById: (id) => {
-        return get().lahanList.find((l) => l.id === id);
+        return get().lahanList.find((l) => String(l.id) === String(id));
       },
 
+      // PERBAIKAN PADA REMOVE LAHAN
+      removeLahan: (id) =>
+        set((state) => {
+          const currentRentang = state.rentangSensorIdByLahan || {};
+          const { [id]: _removed, ...sisaRentang } = currentRentang;
+
+          return {
+            lahanList: (state.lahanList || []).filter(
+              (l) => String(l.id) !== String(id)
+            ),
+            rentangSensorIdByLahan: sisaRentang,
+          };
+        }),
+
       rentangSensorIdByLahan: {},
+
       setRentangSensorId: (lahanId, rentang) =>
         set((state) => ({
           rentangSensorIdByLahan: {
-            ...state.rentangSensorIdByLahan,
+            ...(state.rentangSensorIdByLahan || {}),
             [lahanId]: rentang,
           },
         })),
+
       getRentangSensorId: (lahanId) => {
-        return get().rentangSensorIdByLahan[lahanId];
+        return (get().rentangSensorIdByLahan || {})[lahanId];
       },
     }),
     {

@@ -1,9 +1,5 @@
-
 //(rekomendasi)/index.tsx
 import React, { useMemo, useRef, useEffect } from "react";
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
 import {
   View,
   Text,
@@ -56,7 +52,6 @@ const jagungIcon = require("../../../styles/assets/jagung icon.png");
 const padiIcon = require("../../../styles/assets/padi icon.png");
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const CARD_WIDTH = SCREEN_WIDTH - 32;
 
 export default function RekomendasiScreen() {
   const params = useLocalSearchParams();
@@ -69,8 +64,8 @@ export default function RekomendasiScreen() {
   const idLahanParam = Array.isArray(params.idLahan)
     ? params.idLahan[0]
     : params.idLahan;
-
-  const scrollX = useRef(new Animated.Value(0)).current;
+  const from = Array.isArray(params.from) ? params.from[0] : params.from;
+  const dariHistory = from === "history";
 
   // =====================================================
   // 1. AMBIL SESI REKAMAN DARI ZUSTAND
@@ -93,38 +88,29 @@ export default function RekomendasiScreen() {
   // =====================================================
   // 3. DATA LAHAN UNTUK INFORMASI DAN LOKASI
   // =====================================================
-  const getLahanById = useLahanStore(
-    (state) => state.getLahanById
-  );
+  const getLahanById = useLahanStore((state) => state.getLahanById);
 
   const idLahan = idLahanParam
     ? String(idLahanParam)
     : payload?.id_lahan != null
-      ? String(payload.id_lahan)
-      : null;
+    ? String(payload.id_lahan)
+    : null;
 
-  const dataLahan = idLahan
-    ? getLahanById(idLahan)
-    : undefined;
+  const dataLahan = idLahan ? getLahanById(idLahan) : undefined;
 
   // =====================================================
   // 4. PARSING DATA UNTUK RULE ENGINE
-  // Logic rekomendasi dipertahankan
   // =====================================================
   const luasLahan = Number(payload?.luasLahan) || 0;
   const targetHasilPanen = Number(payload?.targetPanen) || 0;
 
   const varietas: Varietas =
-    payload?.tanaman?.toLowerCase() === "jagung"
-      ? "jagung"
-      : "padi";
+    payload?.tanaman?.toLowerCase() === "jagung" ? "jagung" : "padi";
 
   const pupukStr = payload?.pupuk || "";
   const isMajemuk = pupukStr.toLowerCase().includes("majemuk");
 
-  const jenisPupuk: JenisPupuk = isMajemuk
-    ? "majemuk"
-    : "tunggal";
+  const jenisPupuk: JenisPupuk = isMajemuk ? "majemuk" : "tunggal";
 
   let rasioNPK: RasioNPK | undefined = undefined;
 
@@ -224,7 +210,7 @@ export default function RekomendasiScreen() {
     return (
       <View style={styles.safe}>
         <ScreenHeaderFallback
-          title="Rekomendasi"
+          title="Data Lahan"
           onBack={() => router.replace("/(main)/history")}
         />
         <Text style={styles.emptyText}>
@@ -237,13 +223,7 @@ export default function RekomendasiScreen() {
   // =====================================================
   // 8. DATA TAMPILAN
   // =====================================================
-  const judulVarietas =
-    varietas === "padi" ? "Padi" : "Jagung";
-
-  const judulJenis = isMajemuk ? "Majemuk" : "Tunggal";
-
-  const headerTitle =
-    sensor?.name || `Sensor ${payload.device_id}`;
+  const judulVarietas = varietas === "padi" ? "Padi" : "Jagung";
 
   const displayRasioNPK =
     rasioNPK === "15:12:10"
@@ -251,21 +231,17 @@ export default function RekomendasiScreen() {
       : rasioNPK ?? "15:15:15";
 
   const formattedDate = payload.tanggalTanam
-    ? new Date(payload.tanggalTanam).toLocaleDateString(
-      "id-ID",
-      {
+    ? new Date(payload.tanggalTanam).toLocaleDateString("id-ID", {
         day: "numeric",
-        month: "long",
+        month: "short",
         year: "numeric",
-      }
-    )
+      })
     : "-";
 
-  const tanamanIcon =
-    varietas === "jagung" ? jagungIcon : padiIcon;
+  const tanamanIcon = varietas === "jagung" ? jagungIcon : padiIcon;
 
   const namaLahan =
-    dataLahan?.namaLahan || payload.namaLahan || "Lahan";
+    dataLahan?.namaLahan || payload.namaLahan || "Lahan Pak Mateno";
 
   const luasLahanText =
     dataLahan?.luasLahan != null
@@ -277,8 +253,7 @@ export default function RekomendasiScreen() {
       ? String(dataLahan.targetPanen)
       : String(payload.targetPanen ?? "-");
 
-  const alamat =
-    dataLahan?.lokasi?.alamat || "Lokasi belum tersedia";
+  const alamat = dataLahan?.lokasi?.alamat || "Surabaya, Sukolilo, Jawa Timur";
 
   const latitude = dataLahan?.lokasi?.lat;
   const longitude = dataLahan?.lokasi?.lon;
@@ -286,292 +261,271 @@ export default function RekomendasiScreen() {
   return (
     <View style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-        {/* HEADER & INFO LAHAN */}
-        <LinearGradient colors={["#1b5e20", "#4d6b13", "#767614"]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ width: "100%", paddingTop: scale(50), paddingBottom: scale(24), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24), alignItems: "center" }}>
-          <View style={{ flexDirection: "row", width: "100%", alignItems: "center", justifyContent: "center", marginBottom: scale(20), paddingHorizontal: scale(16) }}>
-            <Pressable onPress={() => router.replace("/(main)/history")} style={{ position: "absolute", left: scale(16), zIndex: 1 }}>
-              <ArrowLeft color="#FFFFFF" size={scale(24)} />
-            </Pressable>
-            <Text style={{ color: "#FFFFFF", fontSize: scale(20), fontFamily: "PoppinsBold" }}>
-              Rekomendasi
-            </Text>
-          </View>
+      
+      {/* HEADER & INFO LAHAN */}
+      <LinearGradient
+        colors={["#1b5e20", "#4d6b13", "#767614"]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={styles.headerGradient}
+      >
+        <View style={styles.headerTitleRow}>
+          <Pressable
+            onPress={() => router.replace("/(main)/history")}
+            style={styles.backButton}
+          >
+            <ArrowLeft color="#FFFFFF" size={scale(24)} />
+          </Pressable>
+          <Text style={styles.headerTitleText}>Data Lahan</Text>
+        </View>
 
-          {/* CARD INFO LAHAN */}
-          <View style={{ width: scale(336), height: scale(120), borderRadius: scale(16), backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", paddingHorizontal: scale(18), elevation: 4 }}>
-            <Image source={tanamanIcon} style={{ width: scale(49.372), height: scale(64.666), resizeMode: "contain" }} />
-            <View style={{ flex: 1, marginLeft: scale(12) }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingRight: scale(8) }}>
-                <Text style={{ color: "#1A202C", fontFamily: "PoppinsSemiBold", fontSize: scale(17), flex: 1 }} numberOfLines={1}>
-                  {namaLahan}
-                </Text>
-                <Text style={{ color: "#000000", fontFamily: "PoppinsMedium", fontSize: scale(11), marginLeft: scale(6), marginTop: scale(4) }}>
-                  {formattedDate}
-                </Text>
-              </View>
+        {/* CARD INFO LAHAN */}
+        <View style={styles.landCard}>
+          <Image source={tanamanIcon} style={styles.cropImage} />
+          <View style={styles.landInfoContainer}>
+            <View style={styles.landTitleRow}>
+              <Text style={styles.landName} numberOfLines={1}>
+                {namaLahan}
+              </Text>
+              <Text style={styles.plantDate}>{formattedDate}</Text>
+            </View>
 
-              <View style={{ width: scale(128.564), height: scale(20), borderRadius: scale(5.117), marginBottom: scale(6), overflow: "hidden" }}>
-                <LinearGradient colors={["#187245", "#58C15C"]} start={{ x: 0, y: 0 }} end={{ x: 1.3, y: 0 }} style={{ width: "100%", height: "100%", justifyContent: "center", alignItems: "center" }}>
-                  <Text style={{ color: "#FFFFFF", fontFamily: "PoppinsMedium", fontSize: scale(12.5) }}>
-                    Tanaman {judulVarietas}
-                  </Text>
-                </LinearGradient>
-              </View>
-
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: scale(-3) }}>
-                <Ruler size={scale(15)} color="#1A202C" />
-                <Text style={{ color: "#1A202C", fontFamily: "PoppinsSemiBold", fontSize: scale(13), marginLeft: scale(6) }}>
-                  Luas Lahan : <Text style={{ fontFamily: "PoppinsMedium" }}>{luasLahanText} Hektar</Text>
+            <View style={styles.cropBadge}>
+              <LinearGradient
+                colors={["#187245", "#58C15C"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1.3, y: 0 }}
+                style={styles.cropBadgeGradient}
+              >
+                <Text style={styles.cropBadgeText}>
+                  Tanaman {judulVarietas}
                 </Text>
-              </View>
+              </LinearGradient>
+            </View>
 
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Target size={scale(13)} color="#000000" />
-                <Text style={{ color: "#000000", fontFamily: "PoppinsSemiBold", fontSize: scale(13), marginLeft: scale(6) }}>
-                  Target Panen : <Text style={{ fontFamily: "PoppinsMedium" }}>{targetPanenText} ton/Hektar</Text>
-                </Text>
-              </View>
+            <View style={styles.landDetailRow}>
+              <Ruler size={scale(14)} color="#1A202C" />
+              <Text style={styles.landDetailLabel}>
+                Luas Lahan : <Text style={styles.landDetailValue}>{luasLahanText} Hektar</Text>
+              </Text>
+            </View>
+
+            <View style={styles.landDetailRow}>
+              <Target size={scale(13)} color="#000000" />
+              <Text style={styles.landDetailLabel}>
+                Target Panen : <Text style={styles.landDetailValue}>{targetPanenText} ton/Hektar</Text>
+              </Text>
             </View>
           </View>
-        </LinearGradient>
+        </View>
+      </LinearGradient>
 
       <ScrollView
         bounces={false}
         contentContainerStyle={{ paddingBottom: scale(40) }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ marginTop: scale(20), alignItems: "center", paddingHorizontal: scale(20) }}>
+        <View style={styles.bodyWrapper}>
           <View style={{ width: "100%" }}>
-        {/* ================================================= */}
-        {/* KONDISI TANAH                                     */}
-        {/* ================================================= */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Sprout size={17} color="#252525" />
+            
+            {/* ================================================= */}
+            {/* KONDISI TANAH                                     */}
+            {/* ================================================= */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Sprout size={17} color="#252525" />
+                <Text style={styles.sectionTitle}>Kondisi Tanah</Text>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={18}
+                  color={COLORS.textMuted}
+                />
+              </View>
 
-            <Text style={styles.sectionTitle}>
-              Kondisi Tanah
-            </Text>
+              <Text style={styles.sectionSub}>
+                Pembaruan terakhir: Data rekaman
+              </Text>
 
-            <Ionicons
-              name="information-circle-outline"
-              size={18}
-              color={COLORS.textMuted}
-            />
-          </View>
+              {/* N, P, K */}
+              <View style={styles.soilGrid}>
+                {[
+                  { label: "N", value: `${averageSensor.N}` },
+                  { label: "P", value: `${averageSensor.P}` },
+                  { label: "K", value: `${averageSensor.K}` },
+                ].map((item) => (
+                  <View key={item.label} style={styles.soilCard}>
+                    <View style={styles.soilCardHeader}>
+                      <View style={styles.soilLabelRow}>
+                        <Leaf size={14} color="#FFFFFF" />
+                        <Text style={styles.soilCardLabel}>{item.label}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.soilCardBody}>
+                      <Text style={styles.soilCardValue}>{item.value}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
 
-          <Text style={styles.sectionSub}>
-            Pembaruan terakhir: Data rekaman
-          </Text>
+              {/* EC dan pH */}
+              <View style={styles.soilGrid}>
+                <View style={styles.soilCard}>
+                  <View style={styles.soilCardHeader}>
+                    <View style={styles.soilLabelRow}>
+                      <Zap size={14} color="#FFFFFF" />
+                      <Text style={styles.soilCardLabel}>EC</Text>
+                    </View>
+                  </View>
+                  <View style={styles.soilCardBody}>
+                    <Text style={styles.soilCardValue}>{averageSensor.EC}</Text>
+                  </View>
+                </View>
 
-          {/* N, P, K */}
-          <View style={styles.soilGrid}>
-            {[
-              {
-                label: "N",
-                value: `${averageSensor.N} mg/kg`,
-                icon: <Leaf size={16} color="#FFFFFF" />,
-              },
-              {
-                label: "P",
-                value: `${averageSensor.P} mg/kg`,
-                icon: <Leaf size={16} color="#FFFFFF" />,
-              },
-              {
-                label: "K",
-                value: `${averageSensor.K} mg/kg`,
-                icon: <Leaf size={16} color="#FFFFFF" />,
-              },
-            ].map((item) => (
-              <View key={item.label} style={styles.soilCard}>
-                <View style={styles.soilCardHeader}>
-                  <View style={styles.soilLabelRow}>
-                    {item.icon}
-                    <Text style={styles.soilCardLabel}>
-                      {item.label}
+                <View style={styles.soilCard}>
+                  <View style={styles.soilCardHeader}>
+                    <View style={styles.soilLabelRow}>
+                      <FlaskConical size={14} color="#FFFFFF" />
+                      <Text style={styles.soilCardLabel}>pH</Text>
+                    </View>
+                  </View>
+                  <View style={styles.soilCardBody}>
+                    <Text style={styles.soilCardValue}>{averageSensor.pH}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Suhu dan kelembapan */}
+              <View style={styles.soilGrid}>
+                <View style={styles.soilCard}>
+                  <View style={styles.soilCardHeader}>
+                    <View style={styles.soilLabelRow}>
+                      <Thermometer size={14} color="#FFFFFF" />
+                      <Text style={styles.soilCardLabel}>Suhu</Text>
+                    </View>
+                  </View>
+                  <View style={styles.soilCardBody}>
+                    <Text style={styles.soilCardValue}>
+                      {(averageSensor as any).temperature ?? "100"}
                     </Text>
                   </View>
                 </View>
 
-                <View style={styles.soilCardBody}>
-                  <Text style={styles.soilCardValue}>
-                    {item.value}
-                  </Text>
+                <View style={styles.soilCard}>
+                  <View style={styles.soilCardHeader}>
+                    <View style={styles.soilLabelRow}>
+                      <Droplets size={14} color="#FFFFFF" />
+                      <Text style={styles.soilCardLabel}>Kelembapan</Text>
+                    </View>
+                  </View>
+                  <View style={styles.soilCardBody}>
+                    <Text style={styles.soilCardValue}>
+                      {(averageSensor as any).humidity ?? "100"}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))}
-          </View>
-
-          {/* EC dan pH */}
-          <View style={styles.soilGrid}>
-            <View style={styles.soilCard}>
-              <View style={styles.soilCardHeader}>
-                <View style={styles.soilLabelRow}>
-                  <Zap size={16} color="#FFFFFF" />
-                  <Text style={styles.soilCardLabel}>EC</Text>
-                </View>
-              </View>
-
-              <View style={styles.soilCardBody}>
-                <Text style={styles.soilCardValue}>
-                  {averageSensor.EC} mS/cm
-                </Text>
               </View>
             </View>
 
-            <View style={styles.soilCard}>
-              <View style={styles.soilCardHeader}>
-                <View style={styles.soilLabelRow}>
-                  <FlaskConical size={16} color="#FFFFFF" />
-                  <Text style={styles.soilCardLabel}>pH</Text>
-                </View>
-              </View>
-
-              <View style={styles.soilCardBody}>
-                <Text style={styles.soilCardValue}>
-                  {averageSensor.pH}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Suhu dan kelembapan */}
-          <View style={styles.soilGrid}>
-            <View style={styles.soilCard}>
-              <View style={styles.soilCardHeader}>
-                <View style={styles.soilLabelRow}>
-                  <Thermometer size={16} color="#FFFFFF" />
-                  <Text style={styles.soilCardLabel}>
-                    Suhu
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.soilCardBody}>
-                <Text style={styles.soilCardValue}>
-                  {(averageSensor as any).temperature ?? "-"} °C
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.soilCard}>
-              <View style={styles.soilCardHeader}>
-                <View style={styles.soilLabelRow}>
-                  <Droplets size={16} color="#FFFFFF" />
-                  <Text style={styles.soilCardLabel}>
-                    Kelembapan
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.soilCardBody}>
-                <Text style={styles.soilCardValue}>
-                  {(averageSensor as any).humidity ?? "-"}%
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* ================================================= */}
-        {/* RINGKASAN JENIS PUPUK                             */}
-        {/* ================================================= */}
-        <View style={styles.pupukContainer}>
-          <View style={styles.pupukGrid}>
-            {!isMajemuk ? (
-              <>
-                <PupukPair
-                  label="Nitrogen"
-                  value="Urea"
-                />
-                <PupukPair
-                  label="Kalium"
-                  value="KCL"
-                />
-                <PupukPair
-                  label="Fosfat"
-                  value="SP-36"
-                />
-              </>
-            ) : (
-              <>
-                <PupukPair
-                  label="Nitrogen"
-                  value="Urea"
-                />
-                <PupukPair
-                  label="Pupuk Majemuk"
-                  value={`NPK ${displayRasioNPK}`}
-                />
-              </>
-            )}
-          </View>
-        </View>
-
-        {/* ================================================= */}
-        {/* REKOMENDASI PEMUPUKAN                             */}
-        {/* ================================================= */}
-        <View style={styles.section}>
-          <Text style={styles.mainSectionTitle}>
-            Rekomendasi
-          </Text>
-
-          {hasil.jadwal.map((fase, idx) => (
-            <View key={idx} style={styles.rekomendasiCard}>
-              <View style={styles.rekomendasiHeaderRow}>
-                <Text style={styles.rekomendasiLabel}>
-                  Pemupukan ke-{idx + 1}
-                </Text>
-
-                <Text style={styles.rekomendasiHst}>
-                  {fase.fase}
-                </Text>
-              </View>
-
-              {renderFaseItems(
-                fase,
-                isMajemuk,
-                varietas,
-                displayRasioNPK
-              )}
-            </View>
-          ))}
-        </View>
-
-        {/* ================================================= */}
-        {/* LOKASI SAWAH                                      */}
-        {/* ================================================= */}
-        <View style={styles.locationCard}>
-          <LinearGradient
-            colors={["#105C2E", "#8C6A09"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.locationHeader}
-          >
-            <Map size={24} color="#FFFFFF" />
-
-            <Text style={styles.locationHeaderText}>
-              Lokasi Sawah
-            </Text>
-          </LinearGradient>
-
-          <View style={styles.locationBody}>
-            <MapPin size={28} color="#1A202C" />
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.locationAddress}>
-                {alamat}
-              </Text>
-
-              {latitude != null &&
-                longitude != null && (
-                  <Text style={styles.locationCoordinates}>
-                    Koordinat: {latitude}, {longitude}
-                  </Text>
+            {/* ================================================= */}
+            {/* RINGKASAN JENIS PUPUK (GRID 2x2 SESUAI UI)        */}
+            {/* ================================================= */}
+            <View style={styles.section}>
+              <Text style={styles.mainSectionTitle}>Pupuk</Text>
+              <View style={styles.pupukContainer}>
+                {!isMajemuk ? (
+                  <View style={styles.pupukGrid2x2}>
+                    <View style={styles.pupukRow}>
+                      <PupukPair label="Nitrogen" value="Urea" />
+                      <PupukPair label="Kalium" value="KCL" />
+                    </View>
+                    <View style={styles.pupukRow}>
+                      <PupukPair label="Fosfat" value="SP-36" />
+                      <View style={{ flex: 1 }} />
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.pupukGrid2x2}>
+                    <View style={styles.pupukRow}>
+                      <PupukPair label="Nitrogen" value="Urea" />
+                      <PupukPair label="Kalium" value="KCL" />
+                    </View>
+                    <View style={styles.pupukRow}>
+                      <PupukPair label="Fosfat" value="SP-36" />
+                      <PupukPair label="Pupuk Majemuk" value={`NPK ${displayRasioNPK}`} />
+                    </View>
+                  </View>
                 )}
+              </View>
             </View>
-          </View>
-        </View>
+
+            {/* ================================================= */}
+            {/* REKOMENDASI PEMUPUKAN                             */}
+            {/* ================================================= */}
+            <View style={styles.section}>
+              <Text style={styles.mainSectionTitle}>Rekomendasi</Text>
+
+              {hasil.jadwal.map((fase, idx) => (
+                <View key={idx} style={styles.rekomendasiCard}>
+                  <View style={styles.rekomendasiHeaderRow}>
+                    <Text style={styles.rekomendasiLabel}>
+                      Pemupukan ke-{idx + 1}
+                    </Text>
+                    <Text style={styles.rekomendasiHst}>{fase.fase}</Text>
+                  </View>
+
+                  {renderFaseItems(
+                    fase,
+                    isMajemuk,
+                    varietas,
+                    displayRasioNPK
+                  )}
+                </View>
+              ))}
+            </View>
+
+            {/* ================================================= */}
+            {/* LOKASI SAWAH                                      */}
+            {/* ================================================= */}
+            <View style={styles.locationCard}>
+              <LinearGradient
+                colors={["#105C2E", "#8C6A09"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.locationHeader}
+              >
+                <Map size={20} color="#FFFFFF" />
+                <Text style={styles.locationHeaderText}>Lokasi Sawah</Text>
+              </LinearGradient>
+
+              <View style={styles.locationBody}>
+                <MapPin size={24} color="#1A202C" style={{ marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.locationAddress}>{alamat}</Text>
+                  {latitude != null && longitude != null && (
+                    <Text style={styles.locationCoordinates}>
+                      Koordinat: {latitude}, {longitude}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* ================================================= */}
+            {/* TOMBOL PANEN SEKARANG!                            */}
+            {/* ================================================= */}
+            <Pressable
+              onPress={() => router.replace(dariHistory ? "/(main)/history" : "/")}
+              style={styles.harvestButtonWrapper}
+            >
+              <LinearGradient
+                colors={["#105C2E", "#3A6827"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.harvestButton}
+              >
+                <Text style={styles.harvestButtonText}>Panen Sekarang!</Text>
+              </LinearGradient>
+            </Pressable>
 
           </View>
         </View>
@@ -595,11 +549,7 @@ function ScreenHeaderFallback({
       <Pressable onPress={onBack} hitSlop={10}>
         <ArrowLeft size={26} color="#FFFFFF" />
       </Pressable>
-
-      <Text style={styles.fallbackHeaderTitle}>
-        {title}
-      </Text>
-
+      <Text style={styles.fallbackHeaderTitle}>{title}</Text>
       <View style={{ width: 26 }} />
     </View>
   );
@@ -618,15 +568,10 @@ function PupukPair({
   return (
     <View style={styles.pupukPairPill}>
       <View style={styles.pupukPairLabelBox}>
-        <Text style={styles.pupukPairLabel}>
-          {label}
-        </Text>
+        <Text style={styles.pupukPairLabel}>{label}</Text>
       </View>
-
       <View style={styles.pupukPairValueBox}>
-        <Text style={styles.pupukPairValueText}>
-          {value}
-        </Text>
+        <Text style={styles.pupukPairValueText}>{value}</Text>
       </View>
     </View>
   );
@@ -647,12 +592,8 @@ function renderFaseItems(
     return (
       <>
         <View style={styles.rekomendasiTopRow}>
-          <PupukFaseItem
-            label="Urea"
-            value={`${f.urea} kg`}
-          />
+          <PupukFaseItem label="Urea" value={`${f.urea} kg`} />
         </View>
-
         <View style={styles.rekomendasiBottomRow}>
           <PupukFaseItemFull
             label={`NPK ${displayRasioNPK}`}
@@ -663,29 +604,17 @@ function renderFaseItems(
     );
   }
 
-  const f = fase as JadwalFaseTunggal &
-    Partial<JadwalFaseMajemukPadi>;
+  const f = fase as JadwalFaseTunggal & Partial<JadwalFaseMajemukPadi>;
 
   return (
     <>
       <View style={styles.rekomendasiTopRow}>
-        <PupukFaseItem
-          label="Urea"
-          value={`${f.urea} kg`}
-        />
-
+        <PupukFaseItem label="Urea" value={`${f.urea ?? 0} kg`} />
         {f.sp36 !== undefined && (
-          <PupukFaseItem
-            label="SP-36"
-            value={`${f.sp36} kg`}
-          />
+          <PupukFaseItem label="SP-36" value={`${f.sp36} kg`} />
         )}
-
         {f.kcl !== undefined && (
-          <PupukFaseItem
-            label="KCL"
-            value={`${f.kcl} kg`}
-          />
+          <PupukFaseItem label="KCL" value={`${f.kcl} kg`} />
         )}
       </View>
 
@@ -711,15 +640,10 @@ function PupukFaseItem({
   return (
     <View style={styles.pupukFaseItem}>
       <View style={styles.pupukFaseLabel}>
-        <Text style={styles.pupukFaseLabelText}>
-          {label}
-        </Text>
+        <Text style={styles.pupukFaseLabelText}>{label}</Text>
       </View>
-
       <View style={styles.pupukFaseValue}>
-        <Text style={styles.pupukFaseValueText}>
-          {value}
-        </Text>
+        <Text style={styles.pupukFaseValueText}>{value}</Text>
       </View>
     </View>
   );
@@ -735,34 +659,13 @@ function PupukFaseItemFull({
   return (
     <View style={styles.pupukFaseItemFull}>
       <View style={styles.pupukFaseLabel}>
-        <Text style={styles.pupukFaseLabelText}>
-          {label}
-        </Text>
+        <Text style={styles.pupukFaseLabelText}>{label}</Text>
       </View>
-
       <View style={styles.pupukFaseValue}>
-        <Text style={styles.pupukFaseValueText}>
-          {value}
-        </Text>
+        <Text style={styles.pupukFaseValueText}>{value}</Text>
       </View>
     </View>
   );
-}
-
-function parseWarningItem(
-  pesan: string
-): { title: string; desc: string } {
-  const parts = pesan.split("=>");
-
-  return parts.length === 2
-    ? {
-      title: parts[0].trim(),
-      desc: parts[1].trim(),
-    }
-    : {
-      title: pesan.trim(),
-      desc: "",
-    };
 }
 
 // =======================================================
@@ -774,61 +677,68 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
 
-  hero: {
-    paddingTop: 4,
-    paddingHorizontal: 20,
-    paddingBottom: 28,
+  headerGradient: {
+    width: "100%",
+    paddingTop: scale(46),
+    paddingBottom: scale(20),
+    borderBottomLeftRadius: scale(24),
+    borderBottomRightRadius: scale(24),
+    alignItems: "center",
   },
 
-  headerRow: {
-    height: 52,
+  headerTitleRow: {
     flexDirection: "row",
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
+    marginBottom: scale(16),
+    paddingHorizontal: scale(16),
   },
 
   backButton: {
     position: "absolute",
-    left: 0,
-    padding: 3,
+    left: scale(16),
+    zIndex: 1,
   },
 
-  heroTitle: {
+  headerTitleText: {
     color: "#FFFFFF",
+    fontSize: scale(19),
     fontFamily: "PoppinsBold",
-    fontSize: scale(23),
   },
 
   landCard: {
-    width: "100%",
-    minHeight: scale(120),
-    borderRadius: scale(16.972),
-    borderWidth: scale(0.424),
-    borderColor: "#E5E7EB",
+    width: scale(336),
+    minHeight: scale(115),
+    borderRadius: scale(16),
     backgroundColor: "#FFFFFF",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: scale(14),
-    paddingVertical: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
 
   cropImage: {
-    width: scale(49.372),
-    height: scale(64.666),
+    width: scale(48),
+    height: scale(62),
     resizeMode: "contain",
   },
 
-  landInfo: {
+  landInfoContainer: {
     flex: 1,
-    marginLeft: scale(10),
+    marginLeft: scale(12),
   },
 
   landTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 2,
+    marginBottom: scale(2),
   },
 
   landName: {
@@ -839,18 +749,18 @@ const styles = StyleSheet.create({
   },
 
   plantDate: {
-    color: "#000000",
+    color: "#4A5568",
     fontFamily: "PoppinsMedium",
-    fontSize: scale(9),
-    marginLeft: 5,
-    marginTop: 3,
+    fontSize: scale(10),
+    marginLeft: scale(6),
+    marginTop: scale(2),
   },
 
   cropBadge: {
-    width: scale(128.564),
+    width: scale(128),
     height: scale(20),
-    borderRadius: scale(5.117),
-    marginBottom: scale(5),
+    borderRadius: scale(5),
+    marginBottom: scale(6),
     overflow: "hidden",
   },
 
@@ -864,83 +774,77 @@ const styles = StyleSheet.create({
   cropBadgeText: {
     color: "#FFFFFF",
     fontFamily: "PoppinsMedium",
-    fontSize: scale(11),
+    fontSize: scale(11.5),
   },
 
   landDetailRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 1,
+    marginBottom: scale(2),
   },
 
   landDetailLabel: {
     color: "#1A202C",
     fontFamily: "PoppinsSemiBold",
-    fontSize: scale(11),
-    marginLeft: scale(4),
+    fontSize: scale(11.5),
+    marginLeft: scale(6),
   },
 
   landDetailValue: {
-    color: "#1A202C",
     fontFamily: "PoppinsMedium",
-    fontSize: scale(11),
-    flexShrink: 1,
+    fontSize: scale(11.5),
   },
 
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-
-  contentContainer: {
-    paddingBottom: scale(40),
+  bodyWrapper: {
+    marginTop: scale(16),
     alignItems: "center",
+    paddingHorizontal: scale(16),
   },
 
   section: {
     width: "100%",
-    marginBottom: 20,
+    marginBottom: scale(16),
   },
 
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: scale(6),
   },
 
   sectionTitle: {
     color: "#252525",
     fontFamily: "PoppinsBold",
-    fontSize: scale(16),
+    fontSize: scale(15),
   },
 
   sectionSub: {
-    color: "#333333",
+    color: "#666666",
     fontFamily: "PoppinsMedium",
-    fontSize: scale(9),
+    fontSize: scale(9.5),
     textAlign: "center",
-    marginTop: -2,
-    marginBottom: 16,
+    marginTop: scale(2),
+    marginBottom: scale(12),
   },
 
   soilGrid: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 10,
+    gap: scale(8),
+    marginBottom: scale(8),
   },
 
   soilCard: {
     flex: 1,
-    borderRadius: 4,
+    borderRadius: scale(6),
     overflow: "hidden",
-    backgroundColor: "#9FDF9F",
-    elevation: 3,
+    backgroundColor: "#A2E0A2",
+    elevation: 2,
   },
 
   soilCardHeader: {
     backgroundColor: "#2C8A43",
-    paddingVertical: 8,
+    paddingVertical: scale(6),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -949,19 +853,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
+    gap: scale(4),
   },
 
   soilCardLabel: {
     color: "#FFFFFF",
     fontFamily: "PoppinsBold",
-    fontSize: scale(14),
+    fontSize: scale(13),
   },
 
   soilCardBody: {
-    backgroundColor: "#9FDF9F",
-    minHeight: 44,
-    paddingVertical: 9,
+    backgroundColor: "#A2E0A2",
+    paddingVertical: scale(8),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -969,35 +872,42 @@ const styles = StyleSheet.create({
   soilCardValue: {
     color: "#000000",
     fontFamily: "PoppinsMedium",
-    fontSize: scale(16),
+    fontSize: scale(15),
     textAlign: "center",
+  },
+
+  mainSectionTitle: {
+    color: "#000000",
+    fontFamily: "PoppinsBold",
+    fontSize: scale(15),
+    marginBottom: scale(8),
   },
 
   pupukContainer: {
     width: "100%",
     backgroundColor: "#006134",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 8,
+    borderRadius: scale(10),
+    padding: scale(8),
   },
 
-  pupukGrid: {
+  pupukGrid2x2: {
+    gap: scale(8),
+  },
+
+  pupukRow: {
     flexDirection: "row",
-    flexWrap: "nowrap",
-    gap: 8,
+    gap: scale(8),
   },
 
   pupukPairPill: {
     flex: 1,
-    flexDirection: "column",
-    borderRadius: 10,
+    borderRadius: scale(8),
     overflow: "hidden",
   },
 
   pupukPairLabelBox: {
     backgroundColor: "#238B43",
-    paddingVertical: 7,
-    paddingHorizontal: 3,
+    paddingVertical: scale(5),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1005,14 +915,13 @@ const styles = StyleSheet.create({
   pupukPairLabel: {
     color: "#FFFFFF",
     fontFamily: "PoppinsBold",
-    fontSize: scale(15),
+    fontSize: scale(13),
     textAlign: "center",
   },
 
   pupukPairValueBox: {
     backgroundColor: "#B2E7A9",
-    paddingVertical: 7,
-    paddingHorizontal: 3,
+    paddingVertical: scale(6),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1020,81 +929,73 @@ const styles = StyleSheet.create({
   pupukPairValueText: {
     color: "#000000",
     fontFamily: "PoppinsBold",
-    fontSize: scale(17),
+    fontSize: scale(14),
     textAlign: "center",
-  },
-
-  mainSectionTitle: {
-    color: "#000000",
-    fontFamily: "PoppinsBold",
-    fontSize: scale(17),
-    marginBottom: 8,
   },
 
   rekomendasiCard: {
     backgroundColor: "#B2E7A9",
-    borderRadius: 10,
+    borderRadius: scale(10),
     overflow: "hidden",
-    marginBottom: 15,
-    padding: 12,
+    marginBottom: scale(12),
+    padding: scale(10),
   },
 
   rekomendasiHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: scale(8),
   },
 
   rekomendasiLabel: {
     color: "#000000",
     fontFamily: "PoppinsMedium",
-    fontSize: scale(16),
+    fontSize: scale(14),
   },
 
   rekomendasiHst: {
     color: "#000000",
     fontFamily: "PoppinsMedium",
-    fontSize: scale(16),
+    fontSize: scale(14),
   },
 
   rekomendasiTopRow: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 8,
+    gap: scale(8),
+    marginBottom: scale(8),
   },
 
   rekomendasiBottomRow: {
-    gap: 8,
+    gap: scale(8),
   },
 
   pupukFaseItem: {
     flex: 1,
-    borderRadius: 10,
+    borderRadius: scale(8),
     overflow: "hidden",
   },
 
   pupukFaseItemFull: {
-    borderRadius: 10,
+    borderRadius: scale(8),
     overflow: "hidden",
   },
 
   pupukFaseLabel: {
     backgroundColor: "#51A927",
-    paddingVertical: 5,
+    paddingVertical: scale(4),
     alignItems: "center",
   },
 
   pupukFaseLabelText: {
     color: "#FFFFFF",
     fontFamily: "PoppinsBold",
-    fontSize: scale(13),
+    fontSize: scale(12),
   },
 
   pupukFaseValue: {
     backgroundColor: "#105C2E",
-    minHeight: 46,
-    paddingVertical: 12,
+    paddingVertical: scale(10),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1102,70 +1003,40 @@ const styles = StyleSheet.create({
   pupukFaseValueText: {
     color: "#FFFFFF",
     fontFamily: "PoppinsBold",
-    fontSize: scale(13),
-  },
-
-  peringatanScrollView: {
-    width: "100%",
-  },
-
-  peringatanBox: {
-    backgroundColor: "#105C2E",
-    borderRadius: 12,
-    padding: 24,
-    marginRight: 16,
-    width: CARD_WIDTH - 16,
-    minHeight: 120,
-    justifyContent: "center",
-  },
-
-  peringatanTitle: {
-    color: "#FFFFFF",
-    fontFamily: "PoppinsBold",
-    fontSize: scale(14),
-    marginBottom: 8,
-  },
-
-  peringatanDesc: {
-    color: "#FFFFFF",
-    fontFamily: "PoppinsMedium",
     fontSize: scale(12),
-    lineHeight: scale(19),
-    textAlign: "justify",
   },
 
   locationCard: {
     width: "100%",
-    marginTop: 2,
-    marginBottom: 22,
-    borderRadius: 6,
+    marginTop: scale(4),
+    marginBottom: scale(20),
+    borderRadius: scale(8),
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#B8D3C0",
-    elevation: 3,
+    elevation: 2,
     backgroundColor: "#FFFFFF",
   },
 
   locationHeader: {
-    height: 52,
+    height: scale(44),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: scale(8),
   },
 
   locationHeaderText: {
     color: "#FFFFFF",
     fontFamily: "PoppinsBold",
-    fontSize: scale(16),
+    fontSize: scale(15),
   },
 
   locationBody: {
-    padding: 14,
+    padding: scale(12),
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    minHeight: 60,
+    alignItems: "flex-start",
+    gap: scale(10),
   },
 
   locationAddress: {
@@ -1177,20 +1048,19 @@ const styles = StyleSheet.create({
   locationCoordinates: {
     color: "#64748B",
     fontFamily: "PoppinsRegular",
-    fontSize: scale(9),
-    marginTop: 3,
+    fontSize: scale(9.5),
+    marginTop: scale(2),
   },
 
   harvestButtonWrapper: {
-    width: "88%",
-    minHeight: 52,
-    borderRadius: 18,
+    width: "100%",
+    borderRadius: scale(12),
     overflow: "hidden",
-    marginBottom: 28,
+    marginBottom: scale(20),
   },
 
   harvestButton: {
-    minHeight: 52,
+    paddingVertical: scale(14),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1198,7 +1068,7 @@ const styles = StyleSheet.create({
   harvestButtonText: {
     color: "#FFFFFF",
     fontFamily: "PoppinsBold",
-    fontSize: scale(19),
+    fontSize: scale(16),
   },
 
   fallbackHeader: {
@@ -1206,20 +1076,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
   },
 
   fallbackHeaderTitle: {
     color: "#FFFFFF",
     fontFamily: "PoppinsBold",
-    fontSize: 18,
+    fontSize: scale(16),
   },
 
   emptyText: {
     color: COLORS.text,
     textAlign: "center",
-    marginTop: 40,
-    paddingHorizontal: 24,
+    marginTop: scale(40),
+    paddingHorizontal: scale(24),
   },
 });

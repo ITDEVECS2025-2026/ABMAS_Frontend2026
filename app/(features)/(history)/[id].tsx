@@ -1,4 +1,4 @@
-//(feature)/(history)/[id].tsx
+// app/(features)/(history)/[id].tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -15,17 +15,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
-  Calendar,
-  ChevronDown,
   Map,
   MapPin,
-  Radio,
   Ruler,
   Sprout,
-  Tag,
   Target,
+  Trash2,
 } from "lucide-react-native";
-
 
 import SensorMetricCard from "@/components/sensor/SensorMetricCard";
 import { saveHarvestData } from "@/lib/api";
@@ -35,17 +31,9 @@ import { useRekomendasiStore } from "@/store/rekomendasiStore";
 import { useHistoryStore } from "@/store/historystore";
 import { averageSensorReadings } from "@/utils/averageReadings";
 import { scale } from "@/utils/scale";
-import { SafeAreaView } from "react-native-safe-area-context";
-
 
 const jagungIcon = require("@/styles/assets/jagung icon.png");
 const padiIcon = require("@/styles/assets/padi icon.png");
-
-const VARIETAS_OPTIONS = [
-  "Tunggal (Urea, Sp36, KCl)",
-  "Majemuk Phonska (15:15:15)",
-  "Majemuk Phonska (15:10:12)",
-];
 
 const LokasiSawah = ({ alamat, lat, lon }: { alamat: string; lat: string; lon: string }) => (
   <View
@@ -105,6 +93,9 @@ export default function MonitoringLahanTersimpanPage() {
   const router = useRouter();
   const params = useLocalSearchParams<any>();
 
+  // Dapatkan fungsi removeLahan langsung dari useLahanStore untuk hapus lokal offline
+  const removeLahan = useLahanStore((s: any) => s.removeLahan);
+
   const lahanList = useLahanStore((s: any) => s.lahanList ?? s.lahan ?? []);
   const getLahanById = useLahanStore((s: any) => s.getLahanById);
 
@@ -112,7 +103,7 @@ export default function MonitoringLahanTersimpanPage() {
 
   const dataLahanStore = idLahan
     ? (getLahanById ? (getLahanById(idLahan) || getLahanById(Number(idLahan))) : null) ||
-    lahanList.find((l: any) => String(l.id) === idLahan)
+      lahanList.find((l: any) => String(l.id) === idLahan)
     : null;
 
   const namaLahan = dataLahanStore?.namaLahan || (params.namaLahan ? String(params.namaLahan) : "Lahan");
@@ -147,7 +138,6 @@ export default function MonitoringLahanTersimpanPage() {
   const [isSavingPanen, setIsSavingPanen] = useState(false);
 
   // Aksi pembersihan data lokal setelah panen berhasil disimpan.
-  // clearRecordingsByLahan harus tersedia di store/recordingStore.ts.
   const clearRecordingsByLahan = useRecordingStore(
     (s: any) => s.clearRecordingsByLahan
   );
@@ -179,6 +169,27 @@ export default function MonitoringLahanTersimpanPage() {
     setHasRekomendasi(Boolean(savedRecommendation?.hasil));
   }, [savedRecommendation]);
 
+  // Fungsi hapus lokal offline tanpa tergantung ke API Server
+  const handleHapusLahanLokal = () => {
+    if (!idLahan) return;
+
+    Alert.alert(
+      "Hapus Lahan",
+      `Apakah Anda yakin ingin menghapus lahan "${namaLahan}"?`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: () => {
+            removeLahan(String(idLahan));
+            router.back();
+          },
+        },
+      ]
+    );
+  };
+
   const handleSimpanPanen = async () => {
     const hasil = Number(inputHasilPanen.replace(",", "."));
 
@@ -195,18 +206,13 @@ export default function MonitoringLahanTersimpanPage() {
         hasilPanenAktual: hasil,
       } as any);
 
-      // Tutup modal setelah penyimpanan panen di server berhasil.
       setIsModalPanenVisible(false);
 
-      // Bersihkan data lokal yang terkait dengan siklus tanam lama.
-      // Tidak ada data yang dihapus dari server.
       if (idLahan) {
         clearRecordingsByLahan?.(String(idLahan));
         hapusRekomendasiLahan(String(idLahan));
         resetHistory(String(idLahan));
 
-        // Simpan penanda panen kembali agar status "Telah dipanen"
-        // dan tombol "Tanam Lagi" tetap muncul.
         setPanen(String(idLahan), hasil);
       }
 
@@ -273,7 +279,7 @@ export default function MonitoringLahanTersimpanPage() {
             <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#CBD5E1", borderRadius: scale(8), paddingHorizontal: scale(12), height: scale(45), marginBottom: scale(24) }}>
               <TextInput style={{ flex: 1, fontFamily: "PoppinsRegular", fontSize: scale(13), color: "#1A202C" }} placeholder="Masukkan hasil panen..." placeholderTextColor="#94A3B8" keyboardType="decimal-pad" value={inputHasilPanen} onChangeText={setInputHasilPanen} />
               <Text style={{ fontFamily: "PoppinsMedium", fontSize: scale(13), color: "#64748B", fontStyle: "italic" }}>
-                ton/Hektar
+                kg/Hektar
               </Text>
             </View>
 
@@ -301,6 +307,17 @@ export default function MonitoringLahanTersimpanPage() {
           <Text style={{ color: "#FFFFFF", fontSize: scale(20), fontFamily: "PoppinsBold" }}>
             Data Lahan
           </Text>
+
+          {/* TOMBOL HAPUS LAHAN LOKAL */}
+          <Pressable
+            onPress={handleHapusLahanLokal}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={`Hapus ${namaLahan}`}
+            style={{ position: "absolute", right: scale(16), zIndex: 1 }}
+          >
+            <Trash2 size={scale(22)} color="#FFFFFF" />
+          </Pressable>
         </View>
 
         {/* CARD INFO LAHAN */}
@@ -334,13 +351,12 @@ export default function MonitoringLahanTersimpanPage() {
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Target size={scale(13)} color="#000000" />
               <Text style={{ color: "#000000", fontFamily: "PoppinsSemiBold", fontSize: scale(13), marginLeft: scale(6) }}>
-                Target Panen : <Text style={{ fontFamily: "PoppinsMedium" }}>{targetPanen} ton/Hektar</Text>
+                Target Panen : <Text style={{ fontFamily: "PoppinsMedium" }}>{Number(targetPanen).toLocaleString("id-ID")} kg/Hektar</Text>
               </Text>
             </View>
           </View>
         </View>
       </LinearGradient>
-
 
       <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: scale(40) }} showsVerticalScrollIndicator={false}>
         <View style={{ marginTop: scale(20), alignItems: "center", paddingHorizontal: scale(20) }}>
@@ -363,23 +379,18 @@ export default function MonitoringLahanTersimpanPage() {
                 !showFormPupuk ? (
                   <View style={{ alignItems: "center", marginTop: scale(30) }}>
                     <Text style={{ fontFamily: "PoppinsMedium", fontSize: scale(14), color: "#1A202C", marginBottom: scale(16), textAlign: "center" }}>
-                      Anda belum mengambil data kondisi tanah
+                      Anda belum melakukan pengambilan record data
                     </Text>
                     <Pressable
                       onPress={() => {
-                        // Jika belum pernah merekam sensor untuk lahan ini,
-                        // kembali ke halaman input ID sensor dengan ID lahan yang sama.
                         if (!recordingForLahan?.localId) {
                           router.push({
                             pathname: "/(features)/(monitoring)",
-                            params: {
-                              idLahan: String(idLahan),
-                            },
+                            params: { idLahan: String(idLahan) },
                           } as any);
                           return;
                         }
 
-                        // Jika sudah ada rekaman, lanjutkan ke form pupuk.
                         setShowFormPupuk(true);
                       }}
                       style={{ width: scale(200) }}
@@ -395,52 +406,40 @@ export default function MonitoringLahanTersimpanPage() {
                   <View style={{ width: "100%" }}>
                     <RenderGridKondisiTanah />
 
-<LokasiSawah alamat={alamat} lat={lat} lon={lon} />
+                    <LokasiSawah alamat={alamat} lat={lat} lon={lon} />
 
-<Pressable
-  style={{
-    marginTop: scale(24),
-    marginBottom: scale(20),
-  }}
-  onPress={() => {
-    if (!recordingForLahan?.localId) {
-      Alert.alert(
-        "Data rekaman belum tersedia",
-        "Lakukan rekaman sensor untuk lahan ini terlebih dahulu."
-      );
-      return;
-    }
+                    <Pressable
+                      style={{ marginTop: scale(24), marginBottom: scale(20) }}
+                      onPress={() => {
+                        if (!recordingForLahan?.localId) {
+                          Alert.alert(
+                            "Data rekaman belum tersedia",
+                            "Lakukan rekaman sensor untuk lahan ini terlebih dahulu."
+                          );
+                          return;
+                        }
 
-    router.push({
-      pathname: "/(features)/(rekomendasi)",
-      params: {
-        localId: String(recordingForLahan.localId),
-        idLahan: String(idLahan),
-      },
-    } as any);
-  }}
->
-  <LinearGradient
-    colors={["#105C2E", "#588157"]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={{
-      borderRadius: scale(12),
-      paddingVertical: scale(14),
-      alignItems: "center",
-    }}
-  >
-    <Text
-      style={{
-        color: "#FFFFFF",
-        fontFamily: "PoppinsBold",
-        fontSize: scale(16),
-      }}
-    >
-      Rekomendasi
-    </Text>
-  </LinearGradient>
-</Pressable>
+                        router.push({
+                          pathname: "/(features)/(rekomendasi)",
+                          params: {
+                            localId: String(recordingForLahan.localId),
+                            idLahan: String(idLahan),
+                            from: "history",
+                          },
+                        } as any);
+                      }}
+                    >
+                      <LinearGradient
+                        colors={["#105C2E", "#588157"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={{ borderRadius: scale(12), paddingVertical: scale(14), alignItems: "center" }}
+                      >
+                        <Text style={{ color: "#FFFFFF", fontFamily: "PoppinsBold", fontSize: scale(16) }}>
+                          Rekomendasi
+                        </Text>
+                      </LinearGradient>
+                    </Pressable>
                   </View>
                 )
               ) : (
@@ -462,14 +461,14 @@ export default function MonitoringLahanTersimpanPage() {
                   <View style={{ backgroundColor: "#105C2E", borderRadius: scale(10), padding: scale(12), flexDirection: "row", justifyContent: "space-between", marginBottom: scale(24) }}>
                     {(metadataRekomendasi?.jenisPupuk === "majemuk"
                       ? [
-                        { label: "Nitrogen", value: "Urea" },
-                        { label: "Pupuk Majemuk", value: `NPK ${metadataRekomendasi?.rasioNPK ?? "15:15:15"}` },
-                      ]
+                          { label: "Nitrogen", value: "Urea" },
+                          { label: "Pupuk Majemuk", value: `NPK ${metadataRekomendasi?.rasioNPK ?? "15:15:15"}` },
+                        ]
                       : [
-                        { label: "Nitrogen", value: "Urea" },
-                        { label: "Kalium", value: "KCL" },
-                        { label: "Fosfat", value: "SP-36" },
-                      ]
+                          { label: "Nitrogen", value: "Urea" },
+                          { label: "Kalium", value: "KCL" },
+                          { label: "Fosfat", value: "SP-36" },
+                        ]
                     ).map((item: any) => (
                       <View key={item.label} style={{ flex: 1, marginHorizontal: scale(3), borderRadius: scale(6), overflow: "hidden" }}>
                         <View style={{ backgroundColor: "#4CAF50", paddingVertical: scale(6), alignItems: "center" }}>
@@ -525,8 +524,6 @@ export default function MonitoringLahanTersimpanPage() {
                       </View>
                     );
                   })}
-
-
 
                   <LokasiSawah alamat={alamat} lat={lat} lon={lon} />
 

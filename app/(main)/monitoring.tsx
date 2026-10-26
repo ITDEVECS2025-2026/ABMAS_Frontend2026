@@ -1,13 +1,11 @@
 // app/(features)/(main)/monitoring.tsx
-import React, { useState } from "react";
+import React from "react";
 import { View, Pressable, Text, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import SectionHeader from "@/components/ui/SectionHeader";
-import AddLahanCard from "@/components/form/AddlahanCard";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalSearchParams, } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const sensors = [
   { id: "0", name: "Sensor 1" },
@@ -19,18 +17,12 @@ const sensors = [
 
 export default function MonitoringPage() {
   const router = useRouter();
-  const [lahanName, setLahanName] = useState("");
 
   const handlePressSensor = (id: string) => {
     router.push({
       pathname: "/(features)/(sensor)/[id]",
       params: { id },
     } as any);
-  };
-
-  const handleAddLahan = (nama: string) => {
-    console.log("Lahan baru:", nama);
-    setLahanName("");
   };
 
   return (
@@ -40,7 +32,7 @@ export default function MonitoringPage() {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 }}>
         <SectionHeader title="Daftar Sensor" />
 
-        <View style={{ gap: 10, marginBottom: 16 }}>
+        <View style={{ gap: 10 }}>
           {sensors.map((sensor) => (
             <Pressable key={sensor.id} onPress={() => handlePressSensor(sensor.id)}>
               <LinearGradient
@@ -67,23 +59,6 @@ export default function MonitoringPage() {
             </Pressable>
           ))}
         </View>
-
-        <Text
-          style={{
-            color: "#4B5563",
-            fontFamily: "PoppinsRegular",
-            fontSize: 13,
-            marginBottom: 12,
-          }}
-        >
-          Dapatkan rekomendasi pemupukan dengan menambah lahan baru!
-        </Text>
-
-        <AddLahanCard
-          value={lahanName}
-          onChangeText={setLahanName}
-          onAdd={handleAddLahan}
-        />
       </ScrollView>
     </SafeAreaView>
   );
